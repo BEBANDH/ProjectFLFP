@@ -1,0 +1,167 @@
+    Basics to Advanced React Concepts
+
+    No Prior experience in React or Spring Boot is required
+
+    Basics to Advanced Spring Boot with Microservices and Kafka
+
+    DevoOps concepts like CI/CD, Docker and Kubernetes are covered
+
+    Learn how to build scalable end to end systems that server Billions
+
+    Go from Design to Deployment in this All-In-One course
+
+    Spring Core: IOC, Beans, AutoConfig
+
+    Spring Boot: Internals & Starter Projects
+
+    Master Dependency Injection
+
+    Spring MVC Concepts
+
+    Lombok for Java Simplification
+
+    H2 in-memory DB Setup
+
+    Spring Bean Validation & Exception Handling
+
+    REST APIs & Mini Project in Spring Boot
+
+    Spring Data JPA & Hibernate
+
+    DTO Pattern & Mapping
+
+    Monitor & Docs: Actuator, Swagger
+
+    Boost with Dev Tools & Logging
+
+    Audit & Track with Spring Boot
+
+    Integrate 3rd-Party APIs: REST Template
+
+    Secure APIs: Spring Security 6, OAuth, JWT
+
+    Role-based Access & Session Mgmt
+
+    JUnit & Mockito for Testing
+
+    Spring Profiles & Environment Mgmt
+
+    CI/CD: AWS CodePipeline & Elastic Beanstalk
+
+    AOP: Advice Types, Aspect-Oriented Programming
+
+    Redis Cache & Pub/Sub Messaging
+
+    Kafka Messaging in Spring Boot
+
+    Microservices: Architecture & REST API
+
+    Service Discovery with Eureka
+
+    API Gateway & Cloud Bus
+
+    Security: JWT in Microservices
+
+    Tracing & Resilience: Sleuth, Zipkin, Resilience4J
+
+    Centralized Config & Logging: Spring Cloud, ELK
+
+    Docker and Kubernetes for Microservices
+
+    JS Basics: Map, Filter, ES6
+
+    React Core: JSX, Props, State
+
+    State Mgmt: Redux, Context API
+
+    Hooks: useState, useEffect, Advanced Hooks
+
+    React Router & Navigation
+
+    Custom UI with Tailwind CSS
+
+    API Requests with Axios/Fetch
+
+    React DevTools for Debugging
+
+    Form Handling & Validation
+
+    Error Boundaries & Reusable Components
+
+    Performance: useMemo, useCallback
+
+    React.memo & Optimization Techniques
+
+    Async Data Fetching & Windowing
+
+    Lazy Loading & Code Splitting
+
+    React Hooks: Redux Toolkit
+
+    CI/CD for React Apps
+
+    JWT & OAuth for Authentication
+
+    Advanced UI Patterns: Compound Components
+
+    Global State with Context API
+
+    Redux: useSelector & useDispatch
+
+    Optimize React Rendering: Layout Computation
+
+    UI Optimization with Windowing
+
+    Async Components & Client Integration
+
+    Babel & Webpack for Production
+
+    Concurrent Rendering & Reconciliation
+
+    AWS S3 for Scalable Storage
+
+    AWS CodePipeline: Automate Builds
+
+    CloudFront for CDN Integration
+
+    Ref & Imperative Handles in React
+
+    Dynamic Data Loading in React
+
+    Optimize Rerenders with useMemo
+
+    Focus Mgmt for Seamless UX
+
+    Handling Race Conditions in React
+
+    React Hook Form for Advanced Validation
+
+    Protected Routes & Role-based Access
+
+    Advanced State Reducers in React
+
+    Slots for Flexible Component Structures
+
+    Pending UI States for Engagement
+
+    Static Exports for Optimized Sites
+
+    Performance Optimization: Reconciliation
+
+    React DevTools for Performance Monitoring
+
+    React’s Reconciliation Algorithm
+
+    Server Components for Efficient UI
+
+    NodeJS Loader for Dynamic Modules
+
+    Streaming for Faster Content Delivery
+
+    Memoization for Optimizing Repeated Calls
+
+    Refactoring React Code for Performance
+
+    Automate Workflows with CodePipeline and CodeBuild
+
+    Optimize Major React Projects
