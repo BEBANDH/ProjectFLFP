@@ -16,13 +16,9 @@ Chart.register(...registerables);
   styles: [`
     .chart-container {
       position: relative;
-      height: 300px;
+      height: 250px;
       width: 100%;
-      background-color: var(--surface-color);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 15px;
-      margin-top: 20px;
+      margin-top: 10px;
     }
     
     canvas {
