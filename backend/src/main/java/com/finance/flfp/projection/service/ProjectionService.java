@@ -95,7 +95,6 @@ public class ProjectionService {
                     case MONTHLY -> monthlyIncome = monthlyIncome.add(c.getAmount());
                     case ANNUAL -> monthlyIncome = monthlyIncome.add(c.getAmount().divide(BigDecimal.valueOf(12), 2, java.math.RoundingMode.HALF_UP));
                     case WEEKLY -> monthlyIncome = monthlyIncome.add(c.getAmount().multiply(BigDecimal.valueOf(4.33)));
-                    case DAILY -> monthlyIncome = monthlyIncome.add(c.getAmount().multiply(BigDecimal.valueOf(30)));
                     default -> {}
                 }
             }
