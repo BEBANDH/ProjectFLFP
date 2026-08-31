@@ -37,11 +37,12 @@ export class ProjectionChartComponent implements OnChanges, OnDestroy {
   
   @Input() labels: string[] = [];
   @Input() data: number[] = [];
+  @Input() fireTargetNumber: number | null = null;
   
   private chartInstance: Chart | null = null;
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['data'] || changes['labels']) {
+    if (changes['data'] || changes['labels'] || changes['fireTargetNumber']) {
       this.updateChart();
     }
   }
@@ -64,21 +65,37 @@ export class ProjectionChartComponent implements OnChanges, OnDestroy {
         this.chartInstance.destroy();
       }
 
+      const datasets: any[] = [{
+        label: 'Projected Wealth ($)',
+        data: this.data,
+        borderColor: '#6366f1',
+        backgroundColor: 'rgba(99, 102, 241, 0.12)',
+        borderWidth: 3,
+        tension: 0.35,
+        fill: true,
+        pointBackgroundColor: '#10b981',
+        pointRadius: 4,
+        pointHoverRadius: 7
+      }];
+
+      if (this.fireTargetNumber && this.fireTargetNumber > 0) {
+        const fireLineData = new Array(this.labels.length).fill(this.fireTargetNumber);
+        datasets.push({
+          label: 'FIRE Target Threshold (4% Rule)',
+          data: fireLineData,
+          borderColor: '#f59e0b',
+          borderWidth: 2,
+          borderDash: [6, 6],
+          pointRadius: 0,
+          fill: false
+        });
+      }
+
       this.chartInstance = new Chart(ctx, {
         type: 'line',
         data: {
           labels: this.labels,
-          datasets: [{
-            label: 'Projected Wealth ($)',
-            data: this.data,
-            borderColor: '#00E676', // Mint green from SRS
-            backgroundColor: 'rgba(0, 230, 118, 0.1)',
-            borderWidth: 3,
-            tension: 0.3,
-            fill: true,
-            pointBackgroundColor: '#5C6BC0',
-            pointRadius: 4,
-          }]
+          datasets: datasets
         },
         options: {
           responsive: true,
@@ -86,18 +103,28 @@ export class ProjectionChartComponent implements OnChanges, OnDestroy {
           plugins: {
             legend: {
               labels: {
-                color: '#e0e0e0' // Text color
+                color: '#94a3b8',
+                font: { family: 'Inter', size: 12 }
               }
+            },
+            tooltip: {
+              backgroundColor: 'rgba(15, 23, 42, 0.9)',
+              titleColor: '#f8fafc',
+              bodyColor: '#94a3b8',
+              borderColor: 'rgba(255, 255, 255, 0.1)',
+              borderWidth: 1,
+              padding: 12,
+              displayColors: true
             }
           },
           scales: {
             x: {
-              grid: { color: '#333333' },
-              ticks: { color: '#9e9e9e' }
+              grid: { color: 'rgba(255, 255, 255, 0.05)' },
+              ticks: { color: '#94a3b8' }
             },
             y: {
-              grid: { color: '#333333' },
-              ticks: { color: '#9e9e9e' }
+              grid: { color: 'rgba(255, 255, 255, 0.05)' },
+              ticks: { color: '#94a3b8' }
             }
           }
         }

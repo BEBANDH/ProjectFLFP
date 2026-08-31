@@ -6,11 +6,12 @@ import { AccountStateService } from './core/services/account-state.service';
 import { SettingsService } from './core/services/settings.service';
 import { AuthService } from './core/services/auth.service';
 import { PortfolioModalComponent } from './shared/components/portfolio-modal/portfolio-modal.component';
+import { CommandPaletteComponent } from './shared/components/command-palette/command-palette.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule, FormsModule, PortfolioModalComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule, FormsModule, PortfolioModalComponent, CommandPaletteComponent],
   template: `
     <div class="app-layout" [class.is-auth-page]="!authService.isAuthenticated()">
       <!-- Sidebar -->
@@ -99,6 +100,12 @@ import { PortfolioModalComponent } from './shared/components/portfolio-modal/por
           <span class="brand">Forward-Looking Finance Portfolio</span>
           
           <div class="portfolio-controls">
+            <button class="cmd-k-trigger" (click)="palette.isOpen.set(true)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <span>Search</span>
+              <kbd>Ctrl K</kbd>
+            </button>
+
             <select *ngIf="accountState.portfolios().length > 0" 
                     class="portfolio-switcher" 
                     [ngModel]="accountState.activeAccountId()" 
@@ -118,6 +125,7 @@ import { PortfolioModalComponent } from './shared/components/portfolio-modal/por
       </main>
     </div>
     
+    <app-command-palette #palette></app-command-palette>
     <app-portfolio-modal *ngIf="showModal" (closed)="showModal = false"></app-portfolio-modal>
   `,
   styleUrl: './app.component.css'
@@ -129,4 +137,5 @@ export class AppComponent {
   authService = inject(AuthService);
   showModal = false;
 }
+
 

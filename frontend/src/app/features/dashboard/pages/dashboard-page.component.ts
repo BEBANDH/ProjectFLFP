@@ -6,7 +6,9 @@ import { SettingsService } from '../../../core/services/settings.service';
 import { ProjectionService } from '../services/projection.service';
 import { ProjectionResponse, DashboardSummaryResponse, FireSummaryResponse, GoalResponse, GoalCreateRequest } from '../../../shared/models/common-api.models';
 import { ProjectionChartComponent } from '../components/projection-chart/projection-chart.component';
+import { AssetAllocationChartComponent } from '../components/asset-allocation-chart/asset-allocation-chart.component';
 import { PortfolioModalComponent } from '../../../shared/components/portfolio-modal/portfolio-modal.component';
+import { PortfolioWizardComponent } from '../../../shared/components/portfolio-wizard/portfolio-wizard.component';
 import { forkJoin } from 'rxjs';
 
 import { ApiService } from '../../../core/services/api.service';
@@ -14,12 +16,25 @@ import { ApiService } from '../../../core/services/api.service';
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, ProjectionChartComponent, PortfolioModalComponent],
+  imports: [
+    CommonModule, 
+    FormsModule, 
+    ProjectionChartComponent, 
+    AssetAllocationChartComponent, 
+    PortfolioModalComponent, 
+    PortfolioWizardComponent
+  ],
   template: `
     <div class="dashboard-container">
       <header class="dashboard-header">
-        <h1>Financial Projection & Freedom Engine</h1>
-        <p class="subtitle">Real-time compounding trajectory, FIRE crossover & milestone tracking</p>
+        <div>
+          <h1>Financial Projection & Freedom Engine</h1>
+          <p class="subtitle">Real-time compounding trajectory, FIRE crossover & milestone tracking</p>
+        </div>
+        <button class="export-report-btn" (click)="exportReport()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+          Export Report
+        </button>
       </header>
 
       <div class="content-grid" *ngIf="summary && accountState.activeAccountId()">
@@ -134,30 +149,35 @@ import { ApiService } from '../../../core/services/api.service';
           </div>
         </div>
         
-        <!-- Interactive Chart & Inflation Toggle -->
-        <div class="chart-section card">
-          <div class="chart-header">
-            <div class="chart-title-group">
-              <h3>Wealth Trajectory</h3>
-              <button 
-                class="inflation-toggle-btn" 
-                [class.active]="adjustForInflation" 
-                (click)="toggleInflation()">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline><polyline points="17 18 23 18 23 12"></polyline></svg>
-                {{ adjustForInflation ? 'Inflation Adjusted (5% CPI)' : 'Nominal Wealth' }}
-              </button>
+        <!-- Interactive Chart & Asset Allocation Grid -->
+        <div class="charts-double-grid">
+          <div class="chart-section card">
+            <div class="chart-header">
+              <div class="chart-title-group">
+                <h3>Wealth Trajectory</h3>
+                <button 
+                  class="inflation-toggle-btn" 
+                  [class.active]="adjustForInflation" 
+                  (click)="toggleInflation()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline><polyline points="17 18 23 18 23 12"></polyline></svg>
+                  {{ adjustForInflation ? 'Inflation Adjusted (5% CPI)' : 'Nominal Wealth' }}
+                </button>
+              </div>
+              <div class="time-filters">
+                <button [class.active]="projectionMonths === 6" (click)="setProjectionTime(6)">6M</button>
+                <button [class.active]="projectionMonths === 12" (click)="setProjectionTime(12)">1Y</button>
+                <button [class.active]="projectionMonths === 36" (click)="setProjectionTime(36)">3Y</button>
+                <button [class.active]="projectionMonths === 60" (click)="setProjectionTime(60)">5Y</button>
+              </div>
             </div>
-            <div class="time-filters">
-              <button [class.active]="projectionMonths === 6" (click)="setProjectionTime(6)">6M</button>
-              <button [class.active]="projectionMonths === 12" (click)="setProjectionTime(12)">1Y</button>
-              <button [class.active]="projectionMonths === 36" (click)="setProjectionTime(36)">3Y</button>
-              <button [class.active]="projectionMonths === 60" (click)="setProjectionTime(60)">5Y</button>
-            </div>
+            <app-projection-chart 
+              [labels]="chartLabels" 
+              [data]="displayChartData"
+              [fireTargetNumber]="fireSummary?.fireTargetNumber || null">
+            </app-projection-chart>
           </div>
-          <app-projection-chart 
-            [labels]="chartLabels" 
-            [data]="displayChartData">
-          </app-projection-chart>
+
+          <app-asset-allocation-chart [investments]="investments"></app-asset-allocation-chart>
         </div>
 
         <!-- Financial Goals & Milestone Planner Section -->
@@ -306,8 +326,8 @@ import { ApiService } from '../../../core/services/api.service';
         <div class="empty-state-card">
           <h2>Welcome to FLFP</h2>
           <p>You don't have any financial portfolios set up yet.</p>
-          <p>Create a portfolio to establish your baseline balance and start projecting your wealth!</p>
-          <button class="btn-primary huge-btn" (click)="showModal = true">+ Create a Portfolio</button>
+          <p>Create a portfolio using our Guided Setup Wizard to establish your baseline balance and project your wealth!</p>
+          <button class="btn-primary huge-btn" (click)="showWizard = true">🚀 Launch Guided Setup Wizard</button>
         </div>
       </div>
       
@@ -317,12 +337,38 @@ import { ApiService } from '../../../core/services/api.service';
     </div>
     
     <app-portfolio-modal *ngIf="showModal" (closed)="showModal = false"></app-portfolio-modal>
+    <app-portfolio-wizard *ngIf="showWizard" (close)="showWizard = false"></app-portfolio-wizard>
   `,
   styles: [`
     .dashboard-container { display: flex; flex-direction: column; gap: 24px; }
+    .dashboard-header { display: flex; justify-content: space-between; align-items: flex-start; }
     .dashboard-header h1 { margin: 0; color: var(--primary-color); }
     .subtitle { color: var(--text-muted); margin-top: 5px; }
+
+    .export-report-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+      padding: 8px 16px;
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
     
+    .charts-double-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 900px) {
+      .charts-double-grid { grid-template-columns: 1fr; }
+    }
+
     .empty-state-container { display: flex; justify-content: center; align-items: center; padding: 50px 20px; }
     .empty-state-card { background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 12px; padding: 40px; text-align: center; max-width: 500px; }
     .empty-state-card h2 { margin-top: 0; color: var(--primary-color); margin-bottom: 15px; }
@@ -690,6 +736,7 @@ export class DashboardPageComponent implements OnInit {
   targetDate: string = '';
   projectionMonths: number = 12; // Default to 1 Year
   showModal = false;
+  showWizard = false;
 
   credits: any[] = [];
   expenses: any[] = [];
@@ -735,6 +782,10 @@ export class DashboardPageComponent implements OnInit {
     const d = new Date();
     d.setMonth(d.getMonth() + 6);
     this.targetDate = d.toISOString().split('T')[0];
+  }
+
+  exportReport() {
+    window.print();
   }
 
   loadDashboard(accountId: number) {
@@ -861,4 +912,4 @@ export class DashboardPageComponent implements OnInit {
       error: (err) => console.error('Failed to delete goal', err)
     });
   }
-}
+
