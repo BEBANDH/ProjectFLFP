@@ -29,6 +29,11 @@ public class CreditController {
         return ResponseEntity.ok(creditService.getCreditsByAccountId(accountId));
     }
 
+    @PutMapping("/{creditId}")
+    public ResponseEntity<CreditResponse> updateCredit(@PathVariable Long creditId, @Valid @RequestBody CreditCreateRequest request) {
+        return ResponseEntity.ok(creditService.updateCredit(creditId, request));
+    }
+
     @DeleteMapping("/{creditId}")
     public ResponseEntity<Void> deleteCredit(@PathVariable Long creditId) {
         creditService.deleteCredit(creditId);

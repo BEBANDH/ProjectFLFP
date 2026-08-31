@@ -24,6 +24,12 @@ Chart.register(...registerables);
       padding: 15px;
       margin-top: 20px;
     }
+    
+    canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+    }
   `]
 })
 export class ProjectionChartComponent implements OnChanges, OnDestroy {

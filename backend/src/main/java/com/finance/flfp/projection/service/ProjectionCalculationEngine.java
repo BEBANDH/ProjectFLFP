@@ -31,64 +31,83 @@ public class ProjectionCalculationEngine {
             LocalDate today,
             LocalDate targetDate) {
 
-        if (!targetDate.isAfter(today)) {
+        if (account == null || account.getCurrentBalance() == null) {
+            return BigDecimal.ZERO;
+        }
+
+        if (targetDate == null || !targetDate.isAfter(today)) {
             return account.getCurrentBalance();
         }
 
         BigDecimal projectedBalance = account.getCurrentBalance();
 
         // 1. Add Scheduled Inflows (Credits)
-        for (Credit credit : credits) {
-            long occurrences = DateUtils.computeOccurrences(
-                    credit.getStartDate().isBefore(today) ? today.plusDays(1) : credit.getStartDate(), 
-                    targetDate, 
-                    credit.getRecurrenceInterval().name());
-            
-            projectedBalance = projectedBalance.add(credit.getAmount().multiply(BigDecimal.valueOf(occurrences), MC));
+        if (credits != null) {
+            for (Credit credit : credits) {
+                if (credit.getAmount() == null || credit.getStartDate() == null || credit.getRecurrenceInterval() == null) {
+                    continue;
+                }
+                LocalDate start = credit.getStartDate().isBefore(today) ? today.plusDays(1) : credit.getStartDate();
+                long occurrences = DateUtils.computeOccurrences(start, targetDate, credit.getRecurrenceInterval().name());
+                projectedBalance = projectedBalance.add(credit.getAmount().multiply(BigDecimal.valueOf(occurrences), MC));
+            }
         }
 
         // 2. Subtract Scheduled Outflows (Recurring Expenses)
-        for (Expense expense : expenses) {
-            if (expense.getExpenseType() == ExpenseType.RECURRING) {
-                long occurrences = DateUtils.computeOccurrences(
-                        expense.getStartDate().isBefore(today) ? today.plusDays(1) : expense.getStartDate(),
-                        targetDate,
-                        expense.getRecurrenceInterval().name());
-                
-                projectedBalance = projectedBalance.subtract(expense.getAmount().multiply(BigDecimal.valueOf(occurrences), MC));
+        if (expenses != null) {
+            for (Expense expense : expenses) {
+                if (expense.getAmount() == null || expense.getStartDate() == null || expense.getExpenseType() == null) {
+                    continue;
+                }
+                if (expense.getExpenseType() == ExpenseType.RECURRING && expense.getRecurrenceInterval() != null) {
+                    LocalDate start = expense.getStartDate().isBefore(today) ? today.plusDays(1) : expense.getStartDate();
+                    long occurrences = DateUtils.computeOccurrences(start, targetDate, expense.getRecurrenceInterval().name());
+                    projectedBalance = projectedBalance.subtract(expense.getAmount().multiply(BigDecimal.valueOf(occurrences), MC));
+                }
             }
         }
 
         // 3. Process Investments (Outflows and Maturity Yields)
-        for (Investment inv : investments) {
-            LocalDate effectiveLimit = targetDate;
-            if (inv.getMaturityDate() != null && targetDate.isAfter(inv.getMaturityDate())) {
-                effectiveLimit = inv.getMaturityDate();
-            }
-
-            if (inv.getInvestmentStyle() == InvestmentStyle.SIP) {
-                // Deduct SIP outflows
-                long sipOccurrences = DateUtils.computeOccurrences(
-                        inv.getStartDate().isBefore(today) ? today.plusDays(1) : inv.getStartDate(),
-                        effectiveLimit,
-                        "MONTHLY");
-                projectedBalance = projectedBalance.subtract(inv.getInvestedAmount().multiply(BigDecimal.valueOf(sipOccurrences), MC));
-
-                // Add maturity yield if matured
-                if (inv.getMaturityDate() != null && !targetDate.isBefore(inv.getMaturityDate())) {
-                    BigDecimal yield = calculateSipFutureValue(inv);
-                    projectedBalance = projectedBalance.add(yield, MC);
-                }
-            } else if (inv.getInvestmentStyle() == InvestmentStyle.ONE_TIME) {
-                // Deduct Lumpsum if it happens after today
-                if (!inv.getStartDate().isBefore(today) && !inv.getStartDate().isAfter(targetDate)) {
-                    projectedBalance = projectedBalance.subtract(inv.getInvestedAmount(), MC);
+        if (investments != null) {
+            for (Investment inv : investments) {
+                if (inv.getInvestedAmount() == null || inv.getStartDate() == null || inv.getInvestmentStyle() == null) {
+                    continue;
                 }
 
-                // Add maturity yield if matured
-                if (inv.getMaturityDate() != null && !targetDate.isBefore(inv.getMaturityDate())) {
-                    BigDecimal yield = calculateLumpsumFutureValue(inv);
-                    projectedBalance = projectedBalance.add(yield, MC);
+                LocalDate effectiveLimit = targetDate;
+                if (inv.getMaturityDate() != null && targetDate.isAfter(inv.getMaturityDate())) {
+                    effectiveLimit = inv.getMaturityDate();
+                }
+
+                boolean isExcluded = Boolean.TRUE.equals(inv.getIsExcludedFromPrincipal());
+
+                if (inv.getInvestmentStyle() == InvestmentStyle.SIP) {
+                    if (!isExcluded) {
+                        LocalDate sipStart = inv.getStartDate().isBefore(today) ? today.plusDays(1) : inv.getStartDate();
+                        if (!sipStart.isAfter(effectiveLimit)) {
+                            long sipOccurrences = DateUtils.computeOccurrences(
+                                    sipStart,
+                                    effectiveLimit,
+                                    "MONTHLY");
+                            projectedBalance = projectedBalance.subtract(inv.getInvestedAmount().multiply(BigDecimal.valueOf(sipOccurrences), MC));
+                        }
+                    }
+
+                    if (inv.getMaturityDate() != null && !targetDate.isBefore(inv.getMaturityDate())) {
+                        BigDecimal maturityYield = calculateSipFutureValue(inv);
+                        projectedBalance = projectedBalance.add(maturityYield, MC);
+                    }
+                } else if (inv.getInvestmentStyle() == InvestmentStyle.ONE_TIME) {
+                    if (!isExcluded) {
+                        if (!inv.getStartDate().isBefore(today) && !inv.getStartDate().isAfter(targetDate)) {
+                            projectedBalance = projectedBalance.subtract(inv.getInvestedAmount(), MC);
+                        }
+                    }
+
+                    if (inv.getMaturityDate() != null && !targetDate.isBefore(inv.getMaturityDate())) {
+                        BigDecimal maturityYield = calculateLumpsumFutureValue(inv);
+                        projectedBalance = projectedBalance.add(maturityYield, MC);
+                    }
                 }
             }
         }
@@ -97,25 +116,53 @@ public class ProjectionCalculationEngine {
     }
 
     private BigDecimal calculateLumpsumFutureValue(Investment inv) {
-        // A = P * (1 + r/100)^t
-        long years = ChronoUnit.YEARS.between(inv.getStartDate(), inv.getMaturityDate());
-        BigDecimal rate = inv.getRateOfInterest().divide(ONE_HUNDRED, MC);
-        BigDecimal base = BigDecimal.ONE.add(rate, MC);
-        BigDecimal multiplier = base.pow((int) years, MC);
-        return inv.getInvestedAmount().multiply(multiplier, MC);
+        if (inv == null || inv.getInvestedAmount() == null) {
+            return BigDecimal.ZERO;
+        }
+
+        if (inv.getMaturityDate() == null || inv.getStartDate() == null || inv.getMaturityDate().isBefore(inv.getStartDate())) {
+            return inv.getInvestedAmount();
+        }
+
+        double days = ChronoUnit.DAYS.between(inv.getStartDate(), inv.getMaturityDate());
+        if (days <= 0) {
+            return inv.getInvestedAmount();
+        }
+
+        double tYears = days / 365.25;
+        double rate = inv.getRateOfInterest() != null ? inv.getRateOfInterest().doubleValue() / 100.0 : 0.0;
+        double multiplier = Math.pow(1.0 + rate, tYears);
+
+        return inv.getInvestedAmount().multiply(BigDecimal.valueOf(multiplier), MC);
     }
 
     private BigDecimal calculateSipFutureValue(Investment inv) {
-        // FV = P * [((1 + i)^n - 1) / i] * (1 + i)
-        long n = ChronoUnit.MONTHS.between(inv.getStartDate(), inv.getMaturityDate());
-        if (n <= 0) return BigDecimal.ZERO;
+        if (inv == null || inv.getInvestedAmount() == null) {
+            return BigDecimal.ZERO;
+        }
 
-        BigDecimal i = inv.getRateOfInterest().divide(ONE_HUNDRED, MC).divide(TWELVE, MC);
+        if (inv.getMaturityDate() == null || inv.getStartDate() == null || inv.getMaturityDate().isBefore(inv.getStartDate())) {
+            return BigDecimal.ZERO;
+        }
+
+        double days = ChronoUnit.DAYS.between(inv.getStartDate(), inv.getMaturityDate());
+        if (days <= 0) {
+            return inv.getInvestedAmount();
+        }
+
+        int n = (int) Math.max(1, Math.round(days / 30.4375));
+
+        double rate = inv.getRateOfInterest() != null ? inv.getRateOfInterest().doubleValue() : 0.0;
+        if (rate <= 0.0001) {
+            return inv.getInvestedAmount().multiply(BigDecimal.valueOf(n), MC);
+        }
+
+        BigDecimal i = BigDecimal.valueOf(rate).divide(ONE_HUNDRED, MC).divide(TWELVE, MC);
         BigDecimal onePlusI = BigDecimal.ONE.add(i, MC);
-        
-        BigDecimal numerator = onePlusI.pow((int) n, MC).subtract(BigDecimal.ONE, MC);
+
+        BigDecimal numerator = onePlusI.pow(n, MC).subtract(BigDecimal.ONE, MC);
         BigDecimal fraction = numerator.divide(i, MC);
-        
+
         return inv.getInvestedAmount().multiply(fraction, MC).multiply(onePlusI, MC);
     }
 }

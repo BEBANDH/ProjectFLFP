@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../../core/services/api.service';
 import { AccountStateService } from '../../../core/services/account-state.service';
+import { SettingsService } from '../../../core/services/settings.service';
 
 @Component({
   selector: 'app-credit-list-page',
@@ -18,7 +19,7 @@ import { AccountStateService } from '../../../core/services/account-state.servic
       <div class="split-view">
         <!-- Credit Form -->
         <div class="form-card card">
-          <h3>Add New Income Stream</h3>
+          <h3>{{ editingId ? 'Edit Income Stream' : 'Add New Income Stream' }}</h3>
           <form (ngSubmit)="onSubmit()" #creditForm="ngForm" class="expense-form">
             <div class="form-group">
               <label>Source Name</label>
@@ -44,9 +45,14 @@ import { AccountStateService } from '../../../core/services/account-state.servic
               <input type="date" [(ngModel)]="newCredit.startDate" name="startDate" required>
             </div>
 
-            <button type="submit" [disabled]="!creditForm.form.valid || !accountState.activeAccountId()">
-              Add Income
-            </button>
+            <div class="btn-group">
+              <button type="submit" [disabled]="!creditForm.form.valid || !accountState.activeAccountId()">
+                {{ editingId ? 'Update Income' : 'Add Income' }}
+              </button>
+              <button type="button" class="btn-secondary" *ngIf="editingId" (click)="cancelEdit()">
+                Cancel
+              </button>
+            </div>
           </form>
         </div>
 
@@ -63,10 +69,17 @@ import { AccountStateService } from '../../../core/services/account-state.servic
                 <strong>{{ credit.sourceName }}</strong>
               </div>
               <div class="expense-meta">
-                <span class="amount" style="color: var(--positive-color)">+{{ credit.amount | currency }}</span>
+                <span class="amount" style="color: var(--positive-color)">+{{ credit.amount | currency:settings.currencyCode() }}</span>
                 <span class="interval"> / {{ credit.recurrenceInterval | lowercase }}</span>
               </div>
-              <button class="delete-btn" (click)="deleteCredit(credit.id)">✕</button>
+              <div class="action-buttons">
+                <button type="button" class="icon-btn edit-btn" (click)="onEdit(credit)" title="Edit">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                </button>
+                <button type="button" class="icon-btn delete-btn" (click)="deleteCredit(credit.id)" title="Delete">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+              </div>
             </li>
           </ul>
         </div>
@@ -92,6 +105,16 @@ import { AccountStateService } from '../../../core/services/account-state.servic
     .form-group { display: flex; flex-direction: column; margin-bottom: 15px; }
     .form-group label { margin-bottom: 5px; font-size: 0.9rem; color: #ccc; }
     
+    .btn-group { display: flex; gap: 10px; }
+    .btn-secondary {
+      background-color: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+    }
+    .btn-secondary:hover {
+      background-color: var(--surface-hover);
+    }
+
     .expense-list { list-style: none; padding: 0; margin: 0; }
     .expense-item { 
       display: flex; justify-content: space-between; align-items: center; 
@@ -105,8 +128,24 @@ import { AccountStateService } from '../../../core/services/account-state.servic
     .amount { font-weight: bold; }
     .interval { color: var(--text-muted); font-size: 0.8rem; }
     
-    .delete-btn { background: none; color: var(--negative-color); font-size: 1.2rem; padding: 0 5px; }
-    .delete-btn:hover { background-color: rgba(255, 82, 82, 0.1); }
+    .action-buttons { display: flex; gap: 6px; align-items: center; }
+    .icon-btn {
+      background: none;
+      border: none;
+      padding: 6px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: none;
+      min-width: unset;
+    }
+    .edit-btn { color: var(--primary-color); }
+    .edit-btn:hover { background-color: var(--primary-glow); }
+
+    .delete-btn { color: var(--negative-color); }
+    .delete-btn:hover { background-color: rgba(239, 68, 68, 0.1); }
     
     .empty-state { color: var(--text-muted); font-style: italic; }
     
@@ -117,8 +156,10 @@ export class CreditListPageComponent implements OnInit {
   
   api = inject(ApiService);
   accountState = inject(AccountStateService);
+  settings = inject(SettingsService);
   
   credits: any[] = [];
+  editingId: number | null = null;
   
   newCredit = {
     accountId: 0,
@@ -149,20 +190,52 @@ export class CreditListPageComponent implements OnInit {
     });
   }
 
+  onEdit(credit: any) {
+    this.editingId = credit.id;
+    this.newCredit = {
+      accountId: credit.accountId || this.accountState.activeAccountId(),
+      sourceName: credit.sourceName,
+      amount: credit.amount,
+      recurrenceInterval: credit.recurrenceInterval || 'MONTHLY',
+      startDate: credit.startDate
+    };
+  }
+
+  cancelEdit() {
+    this.editingId = null;
+    this.resetForm();
+  }
+
   onSubmit() {
-    this.api.post<any>('/api/v1/credits', this.newCredit).subscribe({
-      next: (res) => {
-        this.credits.push(res);
-        this.resetForm();
-      },
-      error: (err) => console.error('Failed to create credit', err)
-    });
+    if (this.editingId) {
+      this.api.put<any>(`/api/v1/credits/${this.editingId}`, this.newCredit).subscribe({
+        next: (res) => {
+          const index = this.credits.findIndex(c => c.id === this.editingId);
+          if (index !== -1) {
+            this.credits[index] = res;
+          }
+          this.cancelEdit();
+        },
+        error: (err) => console.error('Failed to update credit', err)
+      });
+    } else {
+      this.api.post<any>('/api/v1/credits', this.newCredit).subscribe({
+        next: (res) => {
+          this.credits.push(res);
+          this.resetForm();
+        },
+        error: (err) => console.error('Failed to create credit', err)
+      });
+    }
   }
 
   deleteCredit(id: number) {
     this.api.delete(`/api/v1/credits/${id}`).subscribe({
       next: () => {
         this.credits = this.credits.filter(c => c.id !== id);
+        if (this.editingId === id) {
+          this.cancelEdit();
+        }
       },
       error: (err) => console.error('Failed to delete credit', err)
     });
@@ -171,5 +244,7 @@ export class CreditListPageComponent implements OnInit {
   resetForm() {
     this.newCredit.sourceName = '';
     this.newCredit.amount = 0;
+    this.newCredit.recurrenceInterval = 'MONTHLY';
+    this.newCredit.startDate = new Date().toISOString().split('T')[0];
   }
 }

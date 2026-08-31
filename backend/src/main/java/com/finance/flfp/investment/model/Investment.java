@@ -54,6 +54,9 @@ public class Investment {
     @Column(name = "comments", columnDefinition = "TEXT")
     private String comments;
 
+    @Column(name = "is_excluded_from_principal")
+    private Boolean isExcludedFromPrincipal = false;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

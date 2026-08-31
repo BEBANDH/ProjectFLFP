@@ -29,6 +29,11 @@ public class InvestmentController {
         return ResponseEntity.ok(investmentService.getInvestmentsByAccountId(accountId));
     }
 
+    @PutMapping("/{investmentId}")
+    public ResponseEntity<InvestmentResponse> updateInvestment(@PathVariable Long investmentId, @Valid @RequestBody InvestmentCreateRequest request) {
+        return ResponseEntity.ok(investmentService.updateInvestment(investmentId, request));
+    }
+
     @DeleteMapping("/{investmentId}")
     public ResponseEntity<Void> deleteInvestment(@PathVariable Long investmentId) {
         investmentService.deleteInvestment(investmentId);

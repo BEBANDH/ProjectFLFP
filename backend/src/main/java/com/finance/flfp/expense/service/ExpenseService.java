@@ -59,6 +59,38 @@ public class ExpenseService {
     }
 
     @Transactional
+    public ExpenseResponse updateExpense(Long expenseId, ExpenseCreateRequest request) {
+        Expense expense = expenseRepository.findById(expenseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Expense not found with id: " + expenseId));
+
+        Account account = accountRepository.findById(request.getAccountId())
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + request.getAccountId()));
+
+        if (expense.getExpenseType() == ExpenseType.INSTANT) {
+            Account oldAccount = expense.getAccount();
+            oldAccount.setCurrentBalance(oldAccount.getCurrentBalance().add(expense.getAmount()));
+            accountRepository.save(oldAccount);
+        }
+
+        if (request.getExpenseType() == ExpenseType.INSTANT) {
+            request.setRecurrenceInterval(RecurrenceInterval.NONE);
+            account.setCurrentBalance(account.getCurrentBalance().subtract(request.getAmount()));
+            accountRepository.save(account);
+        }
+
+        expense.setAccount(account);
+        expense.setName(request.getName());
+        expense.setAmount(request.getAmount());
+        expense.setExpenseType(request.getExpenseType());
+        expense.setRecurrenceInterval(request.getRecurrenceInterval());
+        expense.setStartDate(request.getStartDate());
+        expense.setNotes(request.getNotes());
+
+        Expense updated = expenseRepository.save(expense);
+        return mapToResponse(updated);
+    }
+
+    @Transactional
     public void deleteExpense(Long expenseId) {
         Expense expense = expenseRepository.findById(expenseId)
                 .orElseThrow(() -> new ResourceNotFoundException("Expense not found with id: " + expenseId));

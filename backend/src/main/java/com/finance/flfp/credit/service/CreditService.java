@@ -46,6 +46,24 @@ public class CreditService {
     }
 
     @Transactional
+    public CreditResponse updateCredit(Long creditId, CreditCreateRequest request) {
+        Credit credit = creditRepository.findById(creditId)
+                .orElseThrow(() -> new ResourceNotFoundException("Credit not found with id: " + creditId));
+
+        Account account = accountRepository.findById(request.getAccountId())
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + request.getAccountId()));
+
+        credit.setAccount(account);
+        credit.setSourceName(request.getSourceName());
+        credit.setAmount(request.getAmount());
+        credit.setRecurrenceInterval(request.getRecurrenceInterval());
+        credit.setStartDate(request.getStartDate());
+
+        Credit updated = creditRepository.save(credit);
+        return mapToResponse(updated);
+    }
+
+    @Transactional
     public void deleteCredit(Long creditId) {
         Credit credit = creditRepository.findById(creditId)
                 .orElseThrow(() -> new ResourceNotFoundException("Credit not found with id: " + creditId));

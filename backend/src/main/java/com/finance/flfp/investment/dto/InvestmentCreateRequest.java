@@ -42,5 +42,7 @@ public class InvestmentCreateRequest {
 
     private LocalDate maturityDate;
 
+    private Boolean isExcludedFromPrincipal;
+
     private String comments;
 }

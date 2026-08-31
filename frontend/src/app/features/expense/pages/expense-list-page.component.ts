@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../../core/services/api.service';
 import { AccountStateService } from '../../../core/services/account-state.service';
+import { SettingsService } from '../../../core/services/settings.service';
 
 @Component({
   selector: 'app-expense-list-page',
@@ -18,7 +19,7 @@ import { AccountStateService } from '../../../core/services/account-state.servic
       <div class="split-view">
         <!-- Expense Form -->
         <div class="form-card card">
-          <h3>Add New Expense</h3>
+          <h3>{{ editingId ? 'Edit Expense' : 'Add New Expense' }}</h3>
           <form (ngSubmit)="onSubmit()" #expenseForm="ngForm" class="expense-form">
             <div class="form-group">
               <label>Name</label>
@@ -53,9 +54,14 @@ import { AccountStateService } from '../../../core/services/account-state.servic
               <input type="date" [(ngModel)]="newExpense.startDate" name="startDate" required>
             </div>
 
-            <button type="submit" [disabled]="!expenseForm.form.valid || !accountState.activeAccountId()">
-              Add Expense
-            </button>
+            <div class="btn-group">
+              <button type="submit" [disabled]="!expenseForm.form.valid || !accountState.activeAccountId()">
+                {{ editingId ? 'Update Expense' : 'Add Expense' }}
+              </button>
+              <button type="button" class="btn-secondary" *ngIf="editingId" (click)="cancelEdit()">
+                Cancel
+              </button>
+            </div>
           </form>
         </div>
 
@@ -73,10 +79,17 @@ import { AccountStateService } from '../../../core/services/account-state.servic
                 <span class="badge" [ngClass]="exp.expenseType.toLowerCase()">{{ exp.expenseType }}</span>
               </div>
               <div class="expense-meta">
-                <span class="amount">{{ exp.amount | currency }}</span>
+                <span class="amount">{{ exp.amount | currency:settings.currencyCode() }}</span>
                 <span class="interval" *ngIf="exp.expenseType === 'RECURRING'"> / {{ exp.recurrenceInterval | lowercase }}</span>
               </div>
-              <button class="delete-btn" (click)="deleteExpense(exp.id)">✕</button>
+              <div class="action-buttons">
+                <button type="button" class="icon-btn edit-btn" (click)="onEdit(exp)" title="Edit">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                </button>
+                <button type="button" class="icon-btn delete-btn" (click)="deleteExpense(exp.id)" title="Delete">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+              </div>
             </li>
           </ul>
         </div>
@@ -102,6 +115,16 @@ import { AccountStateService } from '../../../core/services/account-state.servic
     .form-group { display: flex; flex-direction: column; margin-bottom: 15px; }
     .form-group label { margin-bottom: 5px; font-size: 0.9rem; color: #ccc; }
     
+    .btn-group { display: flex; gap: 10px; }
+    .btn-secondary {
+      background-color: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+    }
+    .btn-secondary:hover {
+      background-color: var(--surface-hover);
+    }
+
     .expense-list { list-style: none; padding: 0; margin: 0; }
     .expense-item { 
       display: flex; justify-content: space-between; align-items: center; 
@@ -118,8 +141,24 @@ import { AccountStateService } from '../../../core/services/account-state.servic
     .amount { font-weight: bold; }
     .interval { color: var(--text-muted); font-size: 0.8rem; }
     
-    .delete-btn { background: none; color: var(--negative-color); font-size: 1.2rem; padding: 0 5px; }
-    .delete-btn:hover { background-color: rgba(255, 82, 82, 0.1); }
+    .action-buttons { display: flex; gap: 6px; align-items: center; }
+    .icon-btn {
+      background: none;
+      border: none;
+      padding: 6px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: none;
+      min-width: unset;
+    }
+    .edit-btn { color: var(--primary-color); }
+    .edit-btn:hover { background-color: var(--primary-glow); }
+
+    .delete-btn { color: var(--negative-color); }
+    .delete-btn:hover { background-color: rgba(239, 68, 68, 0.1); }
     
     .empty-state { color: var(--text-muted); font-style: italic; }
     
@@ -130,8 +169,10 @@ export class ExpenseListPageComponent implements OnInit {
   
   api = inject(ApiService);
   accountState = inject(AccountStateService);
+  settings = inject(SettingsService);
   
   expenses: any[] = [];
+  editingId: number | null = null;
   
   newExpense = {
     accountId: 0,
@@ -164,24 +205,58 @@ export class ExpenseListPageComponent implements OnInit {
     });
   }
 
+  onEdit(exp: any) {
+    this.editingId = exp.id;
+    this.newExpense = {
+      accountId: exp.accountId || this.accountState.activeAccountId(),
+      name: exp.name,
+      amount: exp.amount,
+      expenseType: exp.expenseType,
+      recurrenceInterval: exp.recurrenceInterval || 'MONTHLY',
+      startDate: exp.startDate,
+      notes: exp.notes || ''
+    };
+  }
+
+  cancelEdit() {
+    this.editingId = null;
+    this.resetForm();
+  }
+
   onSubmit() {
     if (this.newExpense.expenseType === 'INSTANT') {
       this.newExpense.recurrenceInterval = 'NONE';
     }
     
-    this.api.post<any>('/api/v1/expenses', this.newExpense).subscribe({
-      next: (res) => {
-        this.expenses.push(res);
-        this.resetForm();
-      },
-      error: (err) => console.error('Failed to create expense', err)
-    });
+    if (this.editingId) {
+      this.api.put<any>(`/api/v1/expenses/${this.editingId}`, this.newExpense).subscribe({
+        next: (res) => {
+          const index = this.expenses.findIndex(e => e.id === this.editingId);
+          if (index !== -1) {
+            this.expenses[index] = res;
+          }
+          this.cancelEdit();
+        },
+        error: (err) => console.error('Failed to update expense', err)
+      });
+    } else {
+      this.api.post<any>('/api/v1/expenses', this.newExpense).subscribe({
+        next: (res) => {
+          this.expenses.push(res);
+          this.resetForm();
+        },
+        error: (err) => console.error('Failed to create expense', err)
+      });
+    }
   }
 
   deleteExpense(id: number) {
     this.api.delete(`/api/v1/expenses/${id}`).subscribe({
       next: () => {
         this.expenses = this.expenses.filter(e => e.id !== id);
+        if (this.editingId === id) {
+          this.cancelEdit();
+        }
       },
       error: (err) => console.error('Failed to delete expense', err)
     });
@@ -190,5 +265,9 @@ export class ExpenseListPageComponent implements OnInit {
   resetForm() {
     this.newExpense.name = '';
     this.newExpense.amount = 0;
+    this.newExpense.expenseType = 'RECURRING';
+    this.newExpense.recurrenceInterval = 'MONTHLY';
+    this.newExpense.startDate = new Date().toISOString().split('T')[0];
+    this.newExpense.notes = '';
   }
 }

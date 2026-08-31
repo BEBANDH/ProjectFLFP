@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../../core/services/api.service';
 import { AccountStateService } from '../../../core/services/account-state.service';
+import { SettingsService } from '../../../core/services/settings.service';
 
 @Component({
   selector: 'app-investment-list-page',
@@ -18,7 +19,7 @@ import { AccountStateService } from '../../../core/services/account-state.servic
       <div class="split-view">
         <!-- Investment Form -->
         <div class="form-card card">
-          <h3>Add New Investment</h3>
+          <h3>{{ editingId ? 'Edit Investment' : 'Add New Investment' }}</h3>
           <form (ngSubmit)="onSubmit()" #invForm="ngForm" class="expense-form">
             <div class="form-group">
               <label>Name</label>
@@ -62,9 +63,21 @@ import { AccountStateService } from '../../../core/services/account-state.servic
               <input type="date" [(ngModel)]="newInv.maturityDate" name="maturityDate">
             </div>
 
-            <button type="submit" [disabled]="!invForm.form.valid || !accountState.activeAccountId()">
-              Add Investment
-            </button>
+            <div class="form-group checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" [(ngModel)]="newInv.isExcludedFromPrincipal" name="isExcludedFromPrincipal">
+                Exclude initial outflow from base amount (e.g. funded externally)
+              </label>
+            </div>
+
+            <div class="btn-group">
+              <button type="submit" [disabled]="!invForm.form.valid || !accountState.activeAccountId()">
+                {{ editingId ? 'Update Investment' : 'Add Investment' }}
+              </button>
+              <button type="button" class="btn-secondary" *ngIf="editingId" (click)="cancelEdit()">
+                Cancel
+              </button>
+            </div>
           </form>
         </div>
 
@@ -79,13 +92,23 @@ import { AccountStateService } from '../../../core/services/account-state.servic
             <li *ngFor="let inv of investments" class="expense-item">
               <div class="expense-info">
                 <strong>{{ inv.investmentName }}</strong>
-                <span class="badge">{{ inv.investmentStyle }}</span>
+                <div class="badge-group">
+                  <span class="badge">{{ inv.investmentStyle }}</span>
+                  <span class="badge excluded-badge" *ngIf="inv.isExcludedFromPrincipal">Excluded from Base Amount</span>
+                </div>
               </div>
               <div class="expense-meta">
-                <span class="amount">{{ inv.investedAmount | currency }}</span>
-                <span class="interval">@ {{ inv.rateOfInterest }}%</span>
+                <span class="amount">{{ inv.investedAmount | currency:settings.currencyCode() }}</span>
+                <span class="interval">&#64; {{ inv.rateOfInterest }}%</span>
               </div>
-              <button class="delete-btn" (click)="deleteInvestment(inv.id)">✕</button>
+              <div class="action-buttons">
+                <button type="button" class="icon-btn edit-btn" (click)="onEdit(inv)" title="Edit">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                </button>
+                <button type="button" class="icon-btn delete-btn" (click)="deleteInvestment(inv.id)" title="Delete">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+              </div>
             </li>
           </ul>
         </div>
@@ -111,6 +134,16 @@ import { AccountStateService } from '../../../core/services/account-state.servic
     .form-group { display: flex; flex-direction: column; margin-bottom: 15px; }
     .form-group label { margin-bottom: 5px; font-size: 0.9rem; color: #ccc; }
     
+    .btn-group { display: flex; gap: 10px; }
+    .btn-secondary {
+      background-color: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+    }
+    .btn-secondary:hover {
+      background-color: var(--surface-hover);
+    }
+
     .expense-list { list-style: none; padding: 0; margin: 0; }
     .expense-item { 
       display: flex; justify-content: space-between; align-items: center; 
@@ -125,8 +158,24 @@ import { AccountStateService } from '../../../core/services/account-state.servic
     .amount { font-weight: bold; }
     .interval { color: var(--text-muted); font-size: 0.8rem; }
     
-    .delete-btn { background: none; color: var(--negative-color); font-size: 1.2rem; padding: 0 5px; }
-    .delete-btn:hover { background-color: rgba(255, 82, 82, 0.1); }
+    .action-buttons { display: flex; gap: 6px; align-items: center; }
+    .icon-btn {
+      background: none;
+      border: none;
+      padding: 6px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: none;
+      min-width: unset;
+    }
+    .edit-btn { color: var(--primary-color); }
+    .edit-btn:hover { background-color: var(--primary-glow); }
+
+    .delete-btn { color: var(--negative-color); }
+    .delete-btn:hover { background-color: rgba(239, 68, 68, 0.1); }
     
     .empty-state { color: var(--text-muted); font-style: italic; }
     
@@ -137,8 +186,10 @@ export class InvestmentListPageComponent implements OnInit {
   
   api = inject(ApiService);
   accountState = inject(AccountStateService);
+  settings = inject(SettingsService);
   
   investments: any[] = [];
+  editingId: number | null = null;
   
   newInv = {
     accountId: 0,
@@ -148,7 +199,8 @@ export class InvestmentListPageComponent implements OnInit {
     investedAmount: 0,
     rateOfInterest: 0,
     startDate: new Date().toISOString().split('T')[0],
-    maturityDate: null
+    maturityDate: null as string | null,
+    isExcludedFromPrincipal: false
   };
 
   constructor() {
@@ -172,20 +224,63 @@ export class InvestmentListPageComponent implements OnInit {
     });
   }
 
+  onEdit(inv: any) {
+    this.editingId = inv.id;
+    this.newInv = {
+      accountId: inv.accountId || this.accountState.activeAccountId(),
+      investmentName: inv.investmentName,
+      investmentType: inv.investmentType,
+      investmentStyle: inv.investmentStyle,
+      investedAmount: inv.investedAmount,
+      rateOfInterest: inv.rateOfInterest,
+      startDate: inv.startDate,
+      maturityDate: inv.maturityDate,
+      isExcludedFromPrincipal: !!inv.isExcludedFromPrincipal
+    };
+  }
+
+  cancelEdit() {
+    this.editingId = null;
+    this.resetForm();
+  }
+
   onSubmit() {
-    this.api.post<any>('/api/v1/investments', this.newInv).subscribe({
-      next: (res) => {
-        this.investments.push(res);
-        this.resetForm();
-      },
-      error: (err) => console.error('Failed to create investment', err)
-    });
+    const payload = {
+      ...this.newInv,
+      maturityDate: this.newInv.maturityDate ? this.newInv.maturityDate : null
+    };
+
+    if (this.editingId) {
+      this.api.put<any>(`/api/v1/investments/${this.editingId}`, payload).subscribe({
+        next: (res) => {
+          const index = this.investments.findIndex(i => i.id === this.editingId);
+          if (index !== -1) {
+            this.investments[index] = res;
+          }
+          this.cancelEdit();
+          this.accountState.loadPortfolios();
+        },
+        error: (err) => console.error('Failed to update investment', err)
+      });
+    } else {
+      this.api.post<any>('/api/v1/investments', payload).subscribe({
+        next: (res) => {
+          this.investments.push(res);
+          this.resetForm();
+          this.accountState.loadPortfolios();
+        },
+        error: (err) => console.error('Failed to create investment', err)
+      });
+    }
   }
 
   deleteInvestment(id: number) {
     this.api.delete(`/api/v1/investments/${id}`).subscribe({
       next: () => {
         this.investments = this.investments.filter(i => i.id !== id);
+        if (this.editingId === id) {
+          this.cancelEdit();
+        }
       },
       error: (err) => console.error('Failed to delete investment', err)
     });
@@ -193,7 +288,12 @@ export class InvestmentListPageComponent implements OnInit {
 
   resetForm() {
     this.newInv.investmentName = '';
+    this.newInv.investmentType = 'EQUITY';
+    this.newInv.investmentStyle = 'SIP';
     this.newInv.investedAmount = 0;
     this.newInv.rateOfInterest = 0;
+    this.newInv.startDate = new Date().toISOString().split('T')[0];
+    this.newInv.maturityDate = null;
+    this.newInv.isExcludedFromPrincipal = false;
   }
 }

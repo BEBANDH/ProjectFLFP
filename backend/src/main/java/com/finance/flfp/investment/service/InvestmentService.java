@@ -40,6 +40,7 @@ public class InvestmentService {
                 .rateOfInterest(request.getRateOfInterest())
                 .startDate(request.getStartDate())
                 .maturityDate(request.getMaturityDate())
+                .isExcludedFromPrincipal(Boolean.TRUE.equals(request.getIsExcludedFromPrincipal()))
                 .comments(request.getComments())
                 .build();
 
@@ -52,6 +53,33 @@ public class InvestmentService {
         return investmentRepository.findByAccountId(accountId).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public InvestmentResponse updateInvestment(Long investmentId, InvestmentCreateRequest request) {
+        Investment investment = investmentRepository.findById(investmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Investment not found with id: " + investmentId));
+
+        Account account = accountRepository.findById(request.getAccountId())
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + request.getAccountId()));
+
+        if (request.getMaturityDate() != null && request.getMaturityDate().isBefore(request.getStartDate())) {
+            throw new IllegalArgumentException("Maturity date cannot be before start date");
+        }
+
+        investment.setAccount(account);
+        investment.setInvestmentName(request.getInvestmentName());
+        investment.setInvestmentType(request.getInvestmentType());
+        investment.setInvestmentStyle(request.getInvestmentStyle());
+        investment.setInvestedAmount(request.getInvestedAmount());
+        investment.setRateOfInterest(request.getRateOfInterest());
+        investment.setStartDate(request.getStartDate());
+        investment.setMaturityDate(request.getMaturityDate());
+        investment.setIsExcludedFromPrincipal(Boolean.TRUE.equals(request.getIsExcludedFromPrincipal()));
+        investment.setComments(request.getComments());
+
+        Investment updated = investmentRepository.save(investment);
+        return mapToResponse(updated);
     }
 
     @Transactional
@@ -72,6 +100,7 @@ public class InvestmentService {
                 .rateOfInterest(investment.getRateOfInterest())
                 .startDate(investment.getStartDate())
                 .maturityDate(investment.getMaturityDate())
+                .isExcludedFromPrincipal(investment.getIsExcludedFromPrincipal())
                 .comments(investment.getComments())
                 .createdAt(investment.getCreatedAt())
                 .build();

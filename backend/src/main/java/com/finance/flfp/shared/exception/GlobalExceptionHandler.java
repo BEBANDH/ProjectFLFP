@@ -71,11 +71,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Object> handleGlobalException(Exception ex, WebRequest request) {
+        ex.printStackTrace();
         Map<String, Object> body = Map.of(
                 "timestamp", ZonedDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT),
                 "status", HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 "error", "Internal Server Error",
-                "message", "An unexpected error occurred",
+                "message", ex.getMessage() != null ? ex.getMessage() : "An unexpected error occurred",
                 "path", request.getDescription(false).replace("uri=", "")
         );
 

@@ -21,6 +21,7 @@ public class InvestmentResponse {
     private BigDecimal rateOfInterest;
     private LocalDate startDate;
     private LocalDate maturityDate;
+    private Boolean isExcludedFromPrincipal;
     private String comments;
     private LocalDateTime createdAt;
 }
