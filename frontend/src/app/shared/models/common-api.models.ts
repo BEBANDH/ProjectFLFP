@@ -22,3 +22,36 @@ export interface ProjectionResponse {
   deltaVariance: number;
   calculatedAt: string;
 }
+
+export interface FireSummaryResponse {
+  accountId: number;
+  monthlyIncome: number;
+  monthlyExpenses: number;
+  savingsRatePercent: number;
+  fireTargetNumber: number;
+  currentPortfolioNestEgg: number;
+  fireProgressPercent: number;
+  fireCrossoverDate: string | null;
+  isFireAchieved: boolean;
+  calculatedAt: string;
+}
+
+export interface GoalResponse {
+  id: number;
+  accountId: number;
+  goalName: string;
+  targetAmount: number;
+  targetDate: string;
+  notes?: string;
+  currentProjectedAmount: number;
+  isOnTrack: boolean;
+  createdAt: string;
+}
+
+export interface GoalCreateRequest {
+  accountId: number;
+  goalName: string;
+  targetAmount: number;
+  targetDate: string;
+  notes?: string;
+}

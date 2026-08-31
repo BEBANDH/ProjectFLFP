@@ -28,4 +28,9 @@ public class ProjectionController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate targetDate) {
         return ResponseEntity.ok(projectionService.calculateProjection(accountId, targetDate));
     }
+
+    @GetMapping("/fire-summary")
+    public ResponseEntity<com.finance.flfp.projection.dto.FireSummaryResponse> getFireSummary(@RequestParam Long accountId) {
+        return ResponseEntity.ok(projectionService.getFireSummary(accountId));
+    }
 }

@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { AccountStateService } from '../../../core/services/account-state.service';
 import { SettingsService } from '../../../core/services/settings.service';
 import { ProjectionService } from '../services/projection.service';
-import { ProjectionResponse, DashboardSummaryResponse } from '../../../shared/models/common-api.models';
+import { ProjectionResponse, DashboardSummaryResponse, FireSummaryResponse, GoalResponse, GoalCreateRequest } from '../../../shared/models/common-api.models';
 import { ProjectionChartComponent } from '../components/projection-chart/projection-chart.component';
 import { PortfolioModalComponent } from '../../../shared/components/portfolio-modal/portfolio-modal.component';
 import { forkJoin } from 'rxjs';
@@ -18,11 +18,62 @@ import { ApiService } from '../../../core/services/api.service';
   template: `
     <div class="dashboard-container">
       <header class="dashboard-header">
-        <h1>Financial Projection Engine</h1>
-        <p class="subtitle">Real-time wealth simulation & compounding trajectory</p>
+        <h1>Financial Projection & Freedom Engine</h1>
+        <p class="subtitle">Real-time compounding trajectory, FIRE crossover & milestone tracking</p>
       </header>
 
       <div class="content-grid" *ngIf="summary && accountState.activeAccountId()">
+        
+        <!-- FIRE & Financial Freedom Intelligence Banner -->
+        <div class="fire-intelligence-card" *ngIf="fireSummary">
+          <div class="fire-header">
+            <div class="fire-title-group">
+              <div class="fire-badge">FIRE Freedom Intelligence</div>
+              <h2>Financial Independence & Retire Early</h2>
+            </div>
+            <div class="savings-rate-pill">
+              <span>Savings Rate:</span>
+              <strong>{{ fireSummary.savingsRatePercent | number:'1.0-1' }}%</strong>
+            </div>
+          </div>
+
+          <div class="fire-metrics-grid">
+            <div class="fire-metric">
+              <span class="metric-label">Target FIRE Nest Egg (4% Rule)</span>
+              <span class="metric-value">{{ fireSummary.fireTargetNumber | currency:settings.currencyCode() }}</span>
+              <span class="metric-sub font-muted">25x Annualized Expenses</span>
+            </div>
+
+            <div class="fire-metric">
+              <span class="metric-label">Current Nest Egg</span>
+              <span class="metric-value accent-text">{{ fireSummary.currentPortfolioNestEgg | currency:settings.currencyCode() }}</span>
+              <span class="metric-sub font-muted">Baseline + Investments</span>
+            </div>
+
+            <div class="fire-metric">
+              <span class="metric-label">Predicted FIRE Crossover Date</span>
+              <span class="metric-value positive-text" *ngIf="fireSummary.fireCrossoverDate">
+                {{ fireSummary.fireCrossoverDate | date:'MMM yyyy' }}
+              </span>
+              <span class="metric-value negative-text" *ngIf="!fireSummary.fireCrossoverDate">
+                Increase Savings
+              </span>
+              <span class="metric-sub font-muted" *ngIf="fireSummary.isFireAchieved">🎉 Freedom Achieved!</span>
+              <span class="metric-sub font-muted" *ngIf="!fireSummary.isFireAchieved">Passive income exceeds expenses</span>
+            </div>
+          </div>
+
+          <div class="fire-progress-bar-container">
+            <div class="progress-labels">
+              <span>FIRE Progress</span>
+              <strong>{{ fireSummary.fireProgressPercent | number:'1.0-1' }}%</strong>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" [style.width.%]="fireSummary.fireProgressPercent > 100 ? 100 : fireSummary.fireProgressPercent"></div>
+            </div>
+          </div>
+        </div>
+
         <!-- Bento Grid Top Section -->
         <div class="bento-grid">
           <!-- Card 1: Baseline -->
@@ -83,10 +134,19 @@ import { ApiService } from '../../../core/services/api.service';
           </div>
         </div>
         
-        <!-- Interactive Chart -->
+        <!-- Interactive Chart & Inflation Toggle -->
         <div class="chart-section card">
           <div class="chart-header">
-            <h3>Wealth Trajectory</h3>
+            <div class="chart-title-group">
+              <h3>Wealth Trajectory</h3>
+              <button 
+                class="inflation-toggle-btn" 
+                [class.active]="adjustForInflation" 
+                (click)="toggleInflation()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline><polyline points="17 18 23 18 23 12"></polyline></svg>
+                {{ adjustForInflation ? 'Inflation Adjusted (5% CPI)' : 'Nominal Wealth' }}
+              </button>
+            </div>
             <div class="time-filters">
               <button [class.active]="projectionMonths === 6" (click)="setProjectionTime(6)">6M</button>
               <button [class.active]="projectionMonths === 12" (click)="setProjectionTime(12)">1Y</button>
@@ -96,8 +156,72 @@ import { ApiService } from '../../../core/services/api.service';
           </div>
           <app-projection-chart 
             [labels]="chartLabels" 
-            [data]="chartData">
+            [data]="displayChartData">
           </app-projection-chart>
+        </div>
+
+        <!-- Financial Goals & Milestone Planner Section -->
+        <div class="goals-section card">
+          <div class="goals-header">
+            <div class="goals-title-group">
+              <div class="goals-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+              </div>
+              <div>
+                <h3>Financial Goals & Milestones</h3>
+                <p class="subtitle">Set targets and verify if your portfolio is on track</p>
+              </div>
+            </div>
+            <button class="btn-primary" (click)="showGoalForm = !showGoalForm">
+              {{ showGoalForm ? 'Cancel' : '+ Add Goal' }}
+            </button>
+          </div>
+
+          <!-- Add Goal Form -->
+          <div class="goal-form-container" *ngIf="showGoalForm">
+            <form (ngSubmit)="createGoal()" class="goal-form">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Goal Name</label>
+                  <input type="text" [(ngModel)]="newGoal.goalName" name="goalName" placeholder="e.g. Buy a House" required>
+                </div>
+                <div class="form-group">
+                  <label>Target Amount ({{ settings.currencyCode() }})</label>
+                  <input type="number" [(ngModel)]="newGoal.targetAmount" name="targetAmount" placeholder="50000" required>
+                </div>
+                <div class="form-group">
+                  <label>Target Date</label>
+                  <input type="date" [(ngModel)]="newGoal.targetDate" name="targetDate" required>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn-primary">Save Milestone Goal</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Goals Cards Grid -->
+          <div class="goals-grid">
+            <div *ngIf="goals.length === 0" class="no-goals-text">
+              No financial goals set yet. Add a target goal (e.g. House Down Payment, Retirement) to track progress!
+            </div>
+            <div *ngFor="let goal of goals" class="goal-card" [class.on-track]="goal.isOnTrack" [class.off-track]="!goal.isOnTrack">
+              <div class="goal-card-header">
+                <span class="goal-name">{{ goal.goalName }}</span>
+                <span class="track-badge" [ngClass]="goal.isOnTrack ? 'on-track-badge' : 'off-track-badge'">
+                  {{ goal.isOnTrack ? '✓ On Track' : '⚠️ Action Needed' }}
+                </span>
+              </div>
+              <div class="goal-amount-row">
+                <span class="target-val">{{ goal.targetAmount | currency:settings.currencyCode() }}</span>
+                <span class="goal-date">Target: {{ goal.targetDate | date:'MMM yyyy' }}</span>
+              </div>
+              <div class="goal-projected-sub">
+                Projected at Date: <strong>{{ goal.currentProjectedAmount | currency:settings.currencyCode() }}</strong>
+              </div>
+              <button class="delete-goal-btn" (click)="deleteGoal(goal.id)">Remove</button>
+            </div>
+          </div>
         </div>
 
         <!-- Portfolio Assets & Cashflows Bento Grid -->
@@ -206,6 +330,84 @@ import { ApiService } from '../../../core/services/api.service';
     .huge-btn { font-size: 1.1rem; padding: 12px 30px; border-radius: 30px; }
     
     .content-grid { display: flex; flex-direction: column; gap: 24px; }
+
+    /* FIRE Intelligence Card */
+    .fire-intelligence-card {
+      background: linear-gradient(135deg, rgba(92, 107, 192, 0.15) 0%, rgba(34, 197, 94, 0.1) 100%);
+      border: 1px solid var(--primary-color);
+      border-radius: var(--radius-xl);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .fire-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .fire-badge {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      background: var(--primary-color);
+      color: #fff;
+      padding: 4px 10px;
+      border-radius: 12px;
+      display: inline-block;
+      margin-bottom: 6px;
+    }
+
+    .fire-title-group h2 { margin: 0; font-size: 1.4rem; color: var(--text-color); }
+
+    .savings-rate-pill {
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.95rem;
+      display: flex;
+      gap: 8px;
+    }
+
+    .fire-metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+
+    .fire-metric {
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      padding: 16px;
+      border-radius: var(--radius-lg);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .metric-label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
+    .metric-value { font-size: 1.5rem; font-weight: 800; font-family: 'Outfit', sans-serif; }
+    .metric-sub { font-size: 0.75rem; color: var(--text-muted); }
+    .accent-text { color: var(--primary-color); }
+    .positive-text { color: var(--positive-color); }
+    .negative-text { color: var(--negative-color); }
+
+    .fire-progress-bar-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .progress-labels { display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 600; }
+    .progress-track { background: var(--surface-hover); height: 10px; border-radius: 5px; overflow: hidden; }
+    .progress-fill { background: linear-gradient(90deg, var(--primary-color) 0%, #4ade80 100%); height: 100%; transition: width 0.4s ease; }
     
     /* Bento Grid */
     .bento-grid {
@@ -302,6 +504,69 @@ import { ApiService } from '../../../core/services/api.service';
 
     .positive { color: var(--positive-color); }
     .negative { color: var(--negative-color); }
+
+    /* Chart Section & Inflation Toggle */
+    .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+    .chart-title-group { display: flex; align-items: center; gap: 16px; }
+    .inflation-toggle-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface-hover);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .inflation-toggle-btn.active {
+      background: rgba(245, 158, 11, 0.2);
+      color: #fbbf24;
+      border-color: rgba(245, 158, 11, 0.4);
+    }
+
+    /* Goals Section */
+    .goals-section { display: flex; flex-direction: column; gap: 16px; }
+    .goals-header { display: flex; justify-content: space-between; align-items: center; }
+    .goals-title-group { display: flex; align-items: center; gap: 12px; }
+    .goals-icon { background: var(--primary-glow); color: var(--primary-color); padding: 8px; border-radius: var(--radius-md); }
+
+    .goal-form-container { background: var(--surface-hover); padding: 16px; border-radius: var(--radius-lg); border: 1px solid var(--border-color); }
+    .goal-form { display: flex; flex-direction: column; gap: 12px; }
+    .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-group label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); }
+
+    .goals-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+    .no-goals-text { color: var(--text-muted); font-size: 0.85rem; font-style: italic; }
+    .goal-card {
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      position: relative;
+    }
+
+    .goal-card.on-track { border-left: 4px solid var(--positive-color); }
+    .goal-card.off-track { border-left: 4px solid var(--warning-color); }
+
+    .goal-card-header { display: flex; justify-content: space-between; align-items: center; }
+    .goal-name { font-weight: 700; font-size: 1rem; color: var(--text-color); }
+    .track-badge { font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+    .on-track-badge { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
+    .off-track-badge { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+
+    .goal-amount-row { display: flex; justify-content: space-between; align-items: baseline; }
+    .target-val { font-size: 1.25rem; font-weight: 800; color: var(--text-color); }
+    .goal-date { font-size: 0.8rem; color: var(--text-muted); }
+    .goal-projected-sub { font-size: 0.8rem; color: var(--text-muted); }
+    .delete-goal-btn { align-self: flex-end; background: transparent; border: none; color: var(--negative-color); font-size: 0.75rem; cursor: pointer; }
 
     /* Portfolio Assets & Cashflows Bento Grid */
     .assets-bento-grid {
@@ -406,7 +671,6 @@ import { ApiService } from '../../../core/services/api.service';
     .rate-tag { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
     .excluded-tag { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
     
-    .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
     .time-filters { display: flex; gap: 6px; }
     .time-filters button { padding: 6px 14px; font-size: 0.85rem; background-color: transparent; border: 1px solid var(--border-color); color: var(--text-muted); border-radius: var(--radius-sm); }
     .time-filters button.active { background-color: var(--primary-glow); color: var(--primary-color); border-color: var(--primary-color); font-weight: 600; }
@@ -421,6 +685,7 @@ export class DashboardPageComponent implements OnInit {
   settings = inject(SettingsService);
   
   summary: DashboardSummaryResponse | null = null;
+  fireSummary: FireSummaryResponse | null = null;
   customProjection: ProjectionResponse | null = null;
   targetDate: string = '';
   projectionMonths: number = 12; // Default to 1 Year
@@ -429,22 +694,39 @@ export class DashboardPageComponent implements OnInit {
   credits: any[] = [];
   expenses: any[] = [];
   investments: any[] = [];
+
+  // Goal Planner
+  goals: GoalResponse[] = [];
+  showGoalForm = false;
+  newGoal: GoalCreateRequest = {
+    accountId: 0,
+    goalName: '',
+    targetAmount: 0,
+    targetDate: new Date(new Date().setFullYear(new Date().getFullYear() + 3)).toISOString().split('T')[0]
+  };
+
+  // Inflation Toggle
+  adjustForInflation = false;
   
   // Chart Data
   chartLabels: string[] = [];
   chartData: number[] = [];
+  displayChartData: number[] = [];
 
   constructor() {
     effect(() => {
       const activeId = this.accountState.activeAccountId();
       if (activeId) {
+        this.newGoal.accountId = activeId;
         this.loadDashboard(activeId);
       } else {
         this.summary = null;
+        this.fireSummary = null;
         this.customProjection = null;
         this.credits = [];
         this.expenses = [];
         this.investments = [];
+        this.goals = [];
       }
     });
   }
@@ -463,6 +745,16 @@ export class DashboardPageComponent implements OnInit {
         this.runSimulation();
       },
       error: (err) => console.error('Failed to load dashboard summary', err)
+    });
+
+    this.api.get<FireSummaryResponse>(`/api/v1/projections/fire-summary?accountId=${accountId}`).subscribe({
+      next: (res) => this.fireSummary = res,
+      error: (err) => console.error('Failed to load FIRE summary', err)
+    });
+
+    this.api.get<GoalResponse[]>(`/api/v1/goals/account/${accountId}`).subscribe({
+      next: (res) => this.goals = res,
+      error: (err) => console.error('Failed to load goals', err)
     });
 
     this.api.get<any[]>(`/api/v1/credits/account/${accountId}`).subscribe({
@@ -504,9 +796,29 @@ export class DashboardPageComponent implements OnInit {
       next: (responses) => {
         this.chartLabels = labels;
         this.chartData = responses.map(r => r.projectedBalance);
+        this.updateDisplayChartData();
       },
       error: (err) => console.error('Failed to load chart data', err)
     });
+  }
+
+  toggleInflation() {
+    this.adjustForInflation = !this.adjustForInflation;
+    this.updateDisplayChartData();
+  }
+
+  updateDisplayChartData() {
+    if (!this.adjustForInflation) {
+      this.displayChartData = [...this.chartData];
+    } else {
+      // 5% Annual inflation discount factor: (1 + 0.05)^(-years)
+      const step = this.projectionMonths > 36 ? 0.5 : (this.projectionMonths > 12 ? 0.25 : 0.0833);
+      this.displayChartData = this.chartData.map((val, index) => {
+        const years = (index + 1) * step;
+        const discountFactor = Math.pow(1.05, -years);
+        return Math.round(val * discountFactor);
+      });
+    }
   }
 
   setProjectionTime(months: number) {
@@ -524,6 +836,29 @@ export class DashboardPageComponent implements OnInit {
     this.projectionService.calculateProjection(activeId, this.targetDate).subscribe({
       next: (res) => this.customProjection = res,
       error: (err) => console.error('Failed to run simulation', err)
+    });
+  }
+
+  createGoal() {
+    const activeId = this.accountState.activeAccountId();
+    if (!activeId || !this.newGoal.goalName || !this.newGoal.targetAmount) return;
+
+    this.newGoal.accountId = activeId;
+    this.api.post<GoalResponse>('/api/v1/goals', this.newGoal).subscribe({
+      next: (res) => {
+        this.goals.push(res);
+        this.showGoalForm = false;
+        this.newGoal.goalName = '';
+        this.newGoal.targetAmount = 0;
+      },
+      error: (err) => console.error('Failed to create goal', err)
+    });
+  }
+
+  deleteGoal(id: number) {
+    this.api.delete(`/api/v1/goals/${id}`).subscribe({
+      next: () => this.goals = this.goals.filter(g => g.id !== id),
+      error: (err) => console.error('Failed to delete goal', err)
     });
   }
 }

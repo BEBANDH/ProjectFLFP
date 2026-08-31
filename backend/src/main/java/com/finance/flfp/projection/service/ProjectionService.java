@@ -8,7 +8,10 @@ import com.finance.flfp.expense.model.Expense;
 import com.finance.flfp.expense.repository.ExpenseRepository;
 import com.finance.flfp.investment.model.Investment;
 import com.finance.flfp.investment.repository.InvestmentRepository;
+import com.finance.flfp.expense.model.ExpenseType;
+import com.finance.flfp.expense.model.RecurrenceInterval;
 import com.finance.flfp.projection.dto.DashboardSummaryResponse;
+import com.finance.flfp.projection.dto.FireSummaryResponse;
 import com.finance.flfp.projection.dto.ProjectionResponse;
 import com.finance.flfp.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -74,6 +77,90 @@ public class ProjectionService {
                 .targetDate(targetDate)
                 .projectedBalance(projectedBalance)
                 .deltaVariance(deltaVariance)
+                .calculatedAt(LocalDateTime.now(ZoneOffset.UTC))
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public com.finance.flfp.projection.dto.FireSummaryResponse getFireSummary(Long accountId) {
+        Account account = getAccount(accountId);
+        List<Credit> credits = creditRepository.findByAccountId(accountId);
+        List<Expense> expenses = expenseRepository.findByAccountId(accountId);
+        List<Investment> investments = investmentRepository.findByAccountId(accountId);
+
+        BigDecimal monthlyIncome = BigDecimal.ZERO;
+        for (Credit c : credits) {
+            if (c.getRecurrenceInterval() != null) {
+                switch (c.getRecurrenceInterval()) {
+                    case MONTHLY -> monthlyIncome = monthlyIncome.add(c.getAmount());
+                    case ANNUAL -> monthlyIncome = monthlyIncome.add(c.getAmount().divide(BigDecimal.valueOf(12), 2, java.math.RoundingMode.HALF_UP));
+                    case WEEKLY -> monthlyIncome = monthlyIncome.add(c.getAmount().multiply(BigDecimal.valueOf(4.33)));
+                    case DAILY -> monthlyIncome = monthlyIncome.add(c.getAmount().multiply(BigDecimal.valueOf(30)));
+                    default -> {}
+                }
+            }
+        }
+
+        BigDecimal monthlyExpenses = BigDecimal.ZERO;
+        for (Expense e : expenses) {
+            if (e.getExpenseType() == com.finance.flfp.expense.model.ExpenseType.RECURRING && e.getRecurrenceInterval() != null) {
+                switch (e.getRecurrenceInterval()) {
+                    case MONTHLY -> monthlyExpenses = monthlyExpenses.add(e.getAmount());
+                    case ANNUAL -> monthlyExpenses = monthlyExpenses.add(e.getAmount().divide(BigDecimal.valueOf(12), 2, java.math.RoundingMode.HALF_UP));
+                    case WEEKLY -> monthlyExpenses = monthlyExpenses.add(e.getAmount().multiply(BigDecimal.valueOf(4.33)));
+                    case DAILY -> monthlyExpenses = monthlyExpenses.add(e.getAmount().multiply(BigDecimal.valueOf(30)));
+                    default -> {}
+                }
+            }
+        }
+
+        BigDecimal savingsRate = BigDecimal.ZERO;
+        if (monthlyIncome.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal netSaved = monthlyIncome.subtract(monthlyExpenses);
+            savingsRate = netSaved.divide(monthlyIncome, 4, java.math.RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
+        }
+
+        BigDecimal annualExpenses = monthlyExpenses.multiply(BigDecimal.valueOf(12));
+        BigDecimal fireTargetNumber = annualExpenses.multiply(BigDecimal.valueOf(25)); // 4% Rule
+
+        BigDecimal currentInvested = investments.stream()
+                .map(Investment::getInvestedAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal nestEgg = account.getCurrentBalance().add(currentInvested);
+
+        BigDecimal progressPercent = BigDecimal.ZERO;
+        if (fireTargetNumber.compareTo(BigDecimal.ZERO) > 0) {
+            progressPercent = nestEgg.divide(fireTargetNumber, 4, java.math.RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
+        }
+
+        boolean isAchieved = nestEgg.compareTo(fireTargetNumber) >= 0 && fireTargetNumber.compareTo(BigDecimal.ZERO) > 0;
+
+        LocalDate today = LocalDate.now(ZoneOffset.UTC);
+        LocalDate crossoverDate = null;
+
+        if (isAchieved) {
+            crossoverDate = today;
+        } else if (fireTargetNumber.compareTo(BigDecimal.ZERO) > 0) {
+            for (int month = 1; month <= 480; month++) { // Simulate up to 40 years
+                LocalDate target = today.plusMonths(month);
+                BigDecimal proj = calculationEngine.calculateProjectedBalance(account, credits, expenses, investments, today, target);
+                if (proj.compareTo(fireTargetNumber) >= 0) {
+                    crossoverDate = target;
+                    break;
+                }
+            }
+        }
+
+        return com.finance.flfp.projection.dto.FireSummaryResponse.builder()
+                .accountId(accountId)
+                .monthlyIncome(monthlyIncome)
+                .monthlyExpenses(monthlyExpenses)
+                .savingsRatePercent(savingsRate)
+                .fireTargetNumber(fireTargetNumber)
+                .currentPortfolioNestEgg(nestEgg)
+                .fireProgressPercent(progressPercent)
+                .fireCrossoverDate(crossoverDate)
+                .isFireAchieved(isAchieved)
                 .calculatedAt(LocalDateTime.now(ZoneOffset.UTC))
                 .build();
     }
