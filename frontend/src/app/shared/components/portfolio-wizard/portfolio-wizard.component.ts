@@ -215,7 +215,7 @@ export class PortfolioWizardComponent {
           }).subscribe();
         }
 
-        this.accountState.loadAccounts();
+        this.accountState.loadPortfolios();
         this.close.emit();
       },
       error: (err) => console.error('Wizard failed to create portfolio', err)

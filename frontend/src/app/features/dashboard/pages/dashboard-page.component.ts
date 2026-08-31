@@ -17,11 +17,11 @@ import { ApiService } from '../../../core/services/api.service';
   selector: 'app-dashboard-page',
   standalone: true,
   imports: [
-    CommonModule, 
-    FormsModule, 
-    ProjectionChartComponent, 
-    AssetAllocationChartComponent, 
-    PortfolioModalComponent, 
+    CommonModule,
+    FormsModule,
+    ProjectionChartComponent,
+    AssetAllocationChartComponent,
+    PortfolioModalComponent,
     PortfolioWizardComponent
   ],
   template: `
@@ -724,12 +724,12 @@ import { ApiService } from '../../../core/services/api.service';
   `]
 })
 export class DashboardPageComponent implements OnInit {
-  
+
   api = inject(ApiService);
   accountState = inject(AccountStateService);
   projectionService = inject(ProjectionService);
   settings = inject(SettingsService);
-  
+
   summary: DashboardSummaryResponse | null = null;
   fireSummary: FireSummaryResponse | null = null;
   customProjection: ProjectionResponse | null = null;
@@ -754,7 +754,7 @@ export class DashboardPageComponent implements OnInit {
 
   // Inflation Toggle
   adjustForInflation = false;
-  
+
   // Chart Data
   chartLabels: string[] = [];
   chartData: number[] = [];
@@ -827,9 +827,9 @@ export class DashboardPageComponent implements OnInit {
   loadChartData(accountId: number) {
     const requests: any[] = [];
     const labels: string[] = [];
-    
+
     let currentDate = new Date();
-    
+
     let step = 1;
     if (this.projectionMonths > 12) step = 3;
     if (this.projectionMonths > 36) step = 6;
@@ -838,11 +838,11 @@ export class DashboardPageComponent implements OnInit {
       let futureDate = new Date(currentDate);
       futureDate.setMonth(currentDate.getMonth() + i);
       const dateString = futureDate.toISOString().split('T')[0];
-      
+
       labels.push(futureDate.toLocaleString('default', { month: 'short' }) + " '" + futureDate.getFullYear().toString().substr(-2));
       requests.push(this.projectionService.calculateProjection(accountId, dateString));
     }
-    
+
     forkJoin(requests).subscribe({
       next: (responses) => {
         this.chartLabels = labels;
@@ -883,7 +883,7 @@ export class DashboardPageComponent implements OnInit {
   runSimulation() {
     const activeId = this.accountState.activeAccountId();
     if (!activeId || !this.targetDate) return;
-    
+
     this.projectionService.calculateProjection(activeId, this.targetDate).subscribe({
       next: (res) => this.customProjection = res,
       error: (err) => console.error('Failed to run simulation', err)
@@ -912,4 +912,4 @@ export class DashboardPageComponent implements OnInit {
       error: (err) => console.error('Failed to delete goal', err)
     });
   }
-
+}
