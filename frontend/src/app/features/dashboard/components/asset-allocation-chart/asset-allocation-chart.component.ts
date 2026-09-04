@@ -1,4 +1,4 @@
-import { Component, ElementRef, Input, OnChanges, SimpleChanges, ViewChild, OnDestroy } from '@angular/core';
+import { Component, ElementRef, Input, OnChanges, SimpleChanges, ViewChild, OnDestroy, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Chart, registerables } from 'chart.js';
 
@@ -44,11 +44,15 @@ Chart.register(...registerables);
     }
   `]
 })
-export class AssetAllocationChartComponent implements OnChanges, OnDestroy {
+export class AssetAllocationChartComponent implements OnChanges, AfterViewInit, OnDestroy {
   @ViewChild('chartCanvas') chartCanvas!: ElementRef<HTMLCanvasElement>;
   @Input() investments: any[] = [];
 
   private chartInstance: Chart | null = null;
+
+  ngAfterViewInit(): void {
+    this.updateChart();
+  }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['investments']) {

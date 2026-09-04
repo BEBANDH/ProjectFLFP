@@ -1,4 +1,4 @@
-import { Component, ElementRef, Input, OnChanges, SimpleChanges, ViewChild, OnDestroy } from '@angular/core';
+import { Component, ElementRef, Input, OnChanges, SimpleChanges, ViewChild, OnDestroy, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Chart, registerables } from 'chart.js';
 
@@ -28,7 +28,7 @@ Chart.register(...registerables);
     }
   `]
 })
-export class ProjectionChartComponent implements OnChanges, OnDestroy {
+export class ProjectionChartComponent implements OnChanges, AfterViewInit, OnDestroy {
   @ViewChild('chartCanvas') chartCanvas!: ElementRef<HTMLCanvasElement>;
   
   @Input() labels: string[] = [];
@@ -36,6 +36,10 @@ export class ProjectionChartComponent implements OnChanges, OnDestroy {
   @Input() fireTargetNumber: number | null = null;
   
   private chartInstance: Chart | null = null;
+
+  ngAfterViewInit(): void {
+    this.updateChart();
+  }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['data'] || changes['labels'] || changes['fireTargetNumber']) {

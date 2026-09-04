@@ -965,7 +965,7 @@ export class DashboardPageComponent implements OnInit {
     });
 
     this.api.get<any[]>(`/api/v1/investments/account/${accountId}`).subscribe({
-      next: (res) => this.investments = res,
+      next: (res) => this.investments = [...(res || [])],
       error: (err) => console.error('Failed to load investments', err)
     });
   }
