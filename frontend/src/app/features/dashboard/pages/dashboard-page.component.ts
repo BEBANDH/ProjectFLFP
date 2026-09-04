@@ -345,9 +345,10 @@ import { ApiService } from '../../../core/services/api.service';
               </ul>
             </div>
         </div>
+      </div> <!-- End content-grid -->
 
-        <!-- Print-Only Executive Financial Statement & Report -->
-        <div class="print-only-report">
+      <!-- Print-Only Executive Financial Statement & Report -->
+      <div class="print-only-report" *ngIf="summary && accountState.activeAccountId()">
           <div class="print-header">
             <div class="print-brand">
               <h2>FINANCIAL LIFE PLANNING & PROJECTION STATEMENT</h2>
@@ -525,7 +526,6 @@ import { ApiService } from '../../../core/services/api.service';
             <p>Report generated automatically by FLFP Engine • Confidential Financial Statement</p>
           </div>
         </div>
-      </div>
       
       <!-- Empty State -->
       <div *ngIf="accountState.portfolios().length === 0" class="empty-state-container">
