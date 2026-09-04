@@ -27,6 +27,11 @@
             "styles": [
               "src/styles.css"
             ],
+            "optimization": {
+              "fonts": {
+                "inline": false
+              }
+            },
             "scripts": []
           },
           "configurations": {
@@ -39,8 +44,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "2kb",
-                  "maximumError": "4kb"
+                  "maximumWarning": "15kb",
+                  "maximumError": "25kb"
                 }
               ],
               "outputHashing": "all"

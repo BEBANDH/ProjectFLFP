@@ -17,5 +17,6 @@ public class CreditResponse {
     private BigDecimal amount;
     private CreditInterval recurrenceInterval;
     private LocalDate startDate;
+    private BigDecimal growthPercentage;
     private LocalDateTime createdAt;
 }

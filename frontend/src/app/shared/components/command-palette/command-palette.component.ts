@@ -236,13 +236,6 @@ export class CommandPaletteComponent {
       icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`,
       action: () => this.settings.toggleTheme()
     },
-    {
-      id: 'action-export-pdf',
-      title: 'Export / Print Wealth Summary Report (PDF)',
-      category: 'Actions',
-      icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>`,
-      action: () => window.print()
-    }
   ];
 
   @HostListener('window:keydown', ['$event'])

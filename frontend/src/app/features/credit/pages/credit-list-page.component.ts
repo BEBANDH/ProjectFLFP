@@ -45,6 +45,11 @@ import { SettingsService } from '../../../core/services/settings.service';
               <input type="date" [(ngModel)]="newCredit.startDate" name="startDate" required>
             </div>
 
+            <div class="form-group">
+              <label>Annual Growth Rate (%) <span class="optional-label">(Optional)</span></label>
+              <input type="number" [(ngModel)]="newCredit.growthPercentage" name="growthPercentage" min="0" max="1000" step="0.5" placeholder="e.g. 5 for 5% annual raise">
+            </div>
+
             <div class="btn-group">
               <button type="submit" [disabled]="!creditForm.form.valid || !accountState.activeAccountId()">
                 {{ editingId ? 'Update Income' : 'Add Income' }}
@@ -67,6 +72,9 @@ import { SettingsService } from '../../../core/services/settings.service';
             <li *ngFor="let credit of credits" class="expense-item">
               <div class="expense-info">
                 <strong>{{ credit.sourceName }}</strong>
+                <span class="growth-tag" *ngIf="credit.growthPercentage && credit.growthPercentage > 0">
+                  📈 +{{ credit.growthPercentage }}% / yr
+                </span>
               </div>
               <div class="expense-meta">
                 <span class="amount" style="color: var(--positive-color)">+{{ credit.amount | currency:settings.currencyCode() }}</span>
@@ -104,6 +112,7 @@ import { SettingsService } from '../../../core/services/settings.service';
     
     .form-group { display: flex; flex-direction: column; margin-bottom: 15px; }
     .form-group label { margin-bottom: 5px; font-size: 0.9rem; color: #ccc; }
+    .optional-label { color: var(--text-muted); font-size: 0.8rem; font-weight: normal; }
     
     .btn-group { display: flex; gap: 10px; }
     .btn-secondary {
@@ -123,6 +132,17 @@ import { SettingsService } from '../../../core/services/settings.service';
     .expense-item:last-child { border-bottom: none; }
     
     .expense-info { display: flex; flex-direction: column; gap: 4px; }
+    .growth-tag {
+      font-size: 0.75rem;
+      background: rgba(16, 185, 129, 0.12);
+      color: #10b981;
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      padding: 2px 6px;
+      border-radius: 4px;
+      display: inline-block;
+      width: fit-content;
+      font-weight: 500;
+    }
     
     .expense-meta { margin-left: auto; margin-right: 15px; text-align: right; }
     .amount { font-weight: bold; }
@@ -161,12 +181,20 @@ export class CreditListPageComponent implements OnInit {
   credits: any[] = [];
   editingId: number | null = null;
   
-  newCredit = {
+  newCredit: {
+    accountId: number;
+    sourceName: string;
+    amount: number;
+    recurrenceInterval: string;
+    startDate: string;
+    growthPercentage?: number | null;
+  } = {
     accountId: 0,
     sourceName: '',
     amount: 0,
     recurrenceInterval: 'MONTHLY',
-    startDate: new Date().toISOString().split('T')[0]
+    startDate: new Date().toISOString().split('T')[0],
+    growthPercentage: null
   };
 
   constructor() {
@@ -197,7 +225,8 @@ export class CreditListPageComponent implements OnInit {
       sourceName: credit.sourceName,
       amount: credit.amount,
       recurrenceInterval: credit.recurrenceInterval || 'MONTHLY',
-      startDate: credit.startDate
+      startDate: credit.startDate,
+      growthPercentage: credit.growthPercentage != null ? credit.growthPercentage : null
     };
   }
 
@@ -246,5 +275,6 @@ export class CreditListPageComponent implements OnInit {
     this.newCredit.amount = 0;
     this.newCredit.recurrenceInterval = 'MONTHLY';
     this.newCredit.startDate = new Date().toISOString().split('T')[0];
+    this.newCredit.growthPercentage = null;
   }
 }

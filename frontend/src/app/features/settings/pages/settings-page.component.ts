@@ -1,13 +1,18 @@
-import { Component, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SettingsService, Theme, Accent } from '../../../core/services/settings.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { KeyboardShortcutsService } from '../../../core/services/keyboard-shortcuts.service';
+import { AccountStateService } from '../../../core/services/account-state.service';
+import { ExportService } from '../../../core/services/export.service';
+import { ApiService } from '../../../core/services/api.service';
+import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-settings-page',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, FormsModule],
   template: `
     <div class="settings-container">
@@ -90,6 +95,27 @@ import { KeyboardShortcutsService } from '../../../core/services/keyboard-shortc
         </div>
       </div>
 
+      <div class="card settings-card">
+        <h3>Data Management</h3>
+        
+        <div class="setting-row">
+          <div class="setting-info">
+            <strong>Export Financial Data</strong>
+            <span>Download your active portfolio's investments, credits, and expenses.</span>
+          </div>
+          <div class="setting-action" style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button class="export-excel-btn" [disabled]="exporting" (click)="exportAllData()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line></svg>
+              <span>{{ exporting ? 'Exporting...' : 'Export Excel (CSV)' }}</span>
+            </button>
+            <button class="export-pdf-btn" [disabled]="exportingPdf" (click)="exportAllDataPdf()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+              <span>{{ exportingPdf ? 'Generating PDF...' : 'Export PDF Invoice' }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Keyboard Shortcuts Cheat Sheet -->
       <div class="card settings-card">
         <h3>Keyboard Shortcuts Reference</h3>
@@ -112,7 +138,7 @@ import { KeyboardShortcutsService } from '../../../core/services/keyboard-shortc
       <!-- Release Notes & Changelog (v1.0) -->
       <div class="card settings-card">
         <div class="changelog-header-row">
-          <h3>Release Notes & Changelog</h3>
+          <h3>Release Notes &amp; Changelog</h3>
           <span class="v1-badge">v1.0 Flagship Release</span>
         </div>
 
@@ -123,14 +149,13 @@ import { KeyboardShortcutsService } from '../../../core/services/keyboard-shortc
               <span class="version-date">September 2026</span>
             </div>
             <ul class="version-features">
-              <li>🚀 <strong>FIRE & Freedom Engine</strong>: Calculates 4% SWR Target Nest Egg and predicts crossover date.</li>
+              <li>🚀 <strong>FIRE &amp; Freedom Engine</strong>: Calculates 4% SWR Target Nest Egg and predicts crossover date.</li>
               <li>🍩 <strong>Asset Allocation Donut Chart</strong>: Grouping investments by SIP, Mutual Funds, Stocks, and Fixed Deposits.</li>
               <li>🔍 <strong>Global Command Palette (Ctrl + K)</strong>: Instant keyboard-driven navigation search.</li>
-              <li>📊 <strong>Excel / CSV Exporter</strong>: 1-click financial data exports for offline auditing.</li>
+              <li>📊 <strong>Excel / CSV &amp; PDF Exporter</strong>: 1-click financial data exports for offline auditing.</li>
               <li>🚀 <strong>Guided Portfolio Wizard</strong>: 4-step interactive setup for new account baseline creation.</li>
-              <li>🖨️ <strong>Clean Printable Invoice & Statement Engine</strong>: Printable financial PDF reports omitting navigation UI.</li>
-              <li>🎯 <strong>Goal Planner & Time-To-Reach Metrics</strong>: Dynamic calculation of exact months needed to hit milestone targets.</li>
-              <li>⚡ <strong>Sidebar Collapse & Compact Mode</strong>: Icon-only sidebar view for maximum screen real estate.</li>
+              <li>🎯 <strong>Goal Planner &amp; Time-To-Reach Metrics</strong>: Dynamic calculation of exact months needed to hit milestone targets.</li>
+              <li>⚡ <strong>Sidebar Collapse &amp; Compact Mode</strong>: Icon-only sidebar view for maximum screen real estate.</li>
             </ul>
           </div>
         </div>
@@ -186,6 +211,49 @@ import { KeyboardShortcutsService } from '../../../core/services/keyboard-shortc
 
     .check-icon { color: white; font-weight: bold; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
 
+    .export-excel-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(16, 185, 129, 0.12);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 7px 14px;
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: none;
+    }
+    .export-excel-btn:hover:not(:disabled) {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: #34d399;
+      color: #10b981;
+    }
+    .export-excel-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .export-pdf-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(239, 68, 68, 0.12);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      padding: 7px 14px;
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: none;
+    }
+    .export-pdf-btn:hover:not(:disabled) {
+      background: rgba(239, 68, 68, 0.22);
+      border-color: #ef4444;
+    }
+    .export-pdf-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
     .logout-btn {
       background-color: transparent !important;
       color: var(--negative-color) !important;
@@ -214,6 +282,12 @@ export class SettingsPageComponent {
   settings = inject(SettingsService);
   authService = inject(AuthService);
   shortcutsService = inject(KeyboardShortcutsService);
+  accountState = inject(AccountStateService);
+  exportService = inject(ExportService);
+  api = inject(ApiService);
+
+  exporting = false;
+  exportingPdf = false;
 
   accentOptions: { id: Accent, name: string, color: string }[] = [
     { id: 'indigo', name: 'Indigo', color: '#6366f1' },
@@ -222,5 +296,78 @@ export class SettingsPageComponent {
     { id: 'amber', name: 'Amber', color: '#f59e0b' },
     { id: 'violet', name: 'Violet', color: '#8b5cf6' }
   ];
-}
 
+  private readonly investmentHeaders = [
+    { key: 'investmentName', label: 'Investment Name' },
+    { key: 'investmentStyle', label: 'Style / Type' },
+    { key: 'investedAmount', label: 'Invested Amount' },
+    { key: 'rateOfInterest', label: 'Interest Rate (%)' },
+    { key: 'startDate', label: 'Start Date' },
+    { key: 'maturityDate', label: 'Maturity Date' }
+  ];
+
+  private fetchAllData(activeId: number) {
+    return forkJoin({
+      investments: this.api.get<any[]>(`/api/v1/investments/account/${activeId}`),
+      expenses: this.api.get<any[]>(`/api/v1/expenses/account/${activeId}`),
+      credits: this.api.get<any[]>(`/api/v1/credits/account/${activeId}`),
+      dashboardSummary: this.api.get<any>(`/api/v1/projections/dashboard-summary?accountId=${activeId}`),
+      fireSummary: this.api.get<any>(`/api/v1/projections/fire-summary?accountId=${activeId}`)
+    });
+  }
+
+  exportAllData() {
+    const activeId = this.accountState.activeAccountId();
+    if (!activeId) { alert('Please select an active portfolio first.'); return; }
+    this.exporting = true;
+
+    this.fetchAllData(activeId).subscribe({
+      next: ({ investments, expenses, credits, dashboardSummary, fireSummary }) => {
+        this.exporting = false;
+        const inv = investments || [];
+        const exp = expenses || [];
+        const crd = credits || [];
+
+        if (!inv.length && !exp.length && !crd.length) {
+          alert('No data found in this portfolio to export.'); return;
+        }
+        this.exportService.exportAllToCsv(
+          'FLFP_Portfolio_Export',
+          inv, this.investmentHeaders,
+          exp, crd,
+          dashboardSummary, fireSummary
+        );
+      },
+      error: (err: any) => {
+        this.exporting = false;
+        console.error('Export CSV error:', err);
+        alert('Failed to export data. Please check your connection and try again.');
+      }
+    });
+  }
+
+  exportAllDataPdf() {
+    const activeId = this.accountState.activeAccountId();
+    if (!activeId) { alert('Please select an active portfolio first.'); return; }
+    this.exportingPdf = true;
+
+    this.fetchAllData(activeId).subscribe({
+      next: ({ investments, expenses, credits, dashboardSummary, fireSummary }) => {
+        this.exportingPdf = false;
+        const inv = investments || [];
+        const exp = expenses || [];
+        const crd = credits || [];
+
+        if (!inv.length && !exp.length && !crd.length) {
+          alert('No data found in this portfolio to export.'); return;
+        }
+        this.exportService.exportAllToPdf('FLFP_Portfolio_Invoice', inv, this.investmentHeaders, exp, crd, dashboardSummary, fireSummary);
+      },
+      error: (err: any) => {
+        this.exportingPdf = false;
+        console.error('Export PDF error:', err);
+        alert('Failed to generate PDF. Please check your connection and try again.');
+      }
+    });
+  }
+}

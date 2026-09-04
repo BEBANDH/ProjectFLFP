@@ -29,4 +29,7 @@ public class CreditCreateRequest {
 
     @NotNull(message = "startDate is required")
     private LocalDate startDate;
+
+    @DecimalMin(value = "0.0", message = "Growth percentage cannot be negative")
+    private BigDecimal growthPercentage;
 }

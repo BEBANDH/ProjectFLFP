@@ -32,6 +32,7 @@ public class CreditService {
                 .amount(request.getAmount())
                 .recurrenceInterval(request.getRecurrenceInterval())
                 .startDate(request.getStartDate())
+                .growthPercentage(request.getGrowthPercentage())
                 .build();
 
         Credit savedCredit = creditRepository.save(credit);
@@ -58,6 +59,7 @@ public class CreditService {
         credit.setAmount(request.getAmount());
         credit.setRecurrenceInterval(request.getRecurrenceInterval());
         credit.setStartDate(request.getStartDate());
+        credit.setGrowthPercentage(request.getGrowthPercentage());
 
         Credit updated = creditRepository.save(credit);
         return mapToResponse(updated);
@@ -78,6 +80,7 @@ public class CreditService {
                 .amount(credit.getAmount())
                 .recurrenceInterval(credit.getRecurrenceInterval())
                 .startDate(credit.getStartDate())
+                .growthPercentage(credit.getGrowthPercentage())
                 .createdAt(credit.getCreatedAt())
                 .build();
     }

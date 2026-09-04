@@ -111,15 +111,6 @@ import { CommandPaletteComponent } from './shared/components/command-palette/com
               <span>Search</span>
               <kbd>Ctrl K</kbd>
             </button>
-
-            <select *ngIf="accountState.portfolios().length > 0" 
-                    class="portfolio-switcher" 
-                    [ngModel]="accountState.activeAccountId()" 
-                    (ngModelChange)="accountState.setActiveAccount($event)">
-              <option *ngFor="let p of accountState.portfolios()" [ngValue]="p.id">
-                {{ p.accountName }} ({{ p.bankName }})
-              </option>
-            </select>
             
             <button class="btn-create" (click)="showModal = true">+ New Portfolio</button>
           </div>

@@ -1,4 +1,4 @@
-import { Component, ElementRef, Input, OnChanges, SimpleChanges, ViewChild, OnDestroy, AfterViewInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, ElementRef, Input, OnChanges, SimpleChanges, ViewChild, OnDestroy, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Chart, registerables } from 'chart.js';
 
@@ -7,6 +7,7 @@ Chart.register(...registerables);
 @Component({
   selector: 'app-projection-chart',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule],
   template: `
     <div class="chart-container">
@@ -16,9 +17,9 @@ Chart.register(...registerables);
   styles: [`
     .chart-container {
       position: relative;
-      height: 250px;
+      height: 220px;
       width: 100%;
-      margin-top: 10px;
+      margin-top: 6px;
     }
     
     canvas {
@@ -33,7 +34,6 @@ export class ProjectionChartComponent implements OnChanges, AfterViewInit, OnDes
   
   @Input() labels: string[] = [];
   @Input() data: number[] = [];
-  @Input() fireTargetNumber: number | null = null;
   
   private chartInstance: Chart | null = null;
 
@@ -42,7 +42,7 @@ export class ProjectionChartComponent implements OnChanges, AfterViewInit, OnDes
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['data'] || changes['labels'] || changes['fireTargetNumber']) {
+    if (changes['data'] || changes['labels']) {
       this.updateChart();
     }
   }
@@ -56,7 +56,6 @@ export class ProjectionChartComponent implements OnChanges, AfterViewInit, OnDes
   private updateChart() {
     if (!this.chartCanvas) return;
     
-    // Allow view to render first if newly created
     setTimeout(() => {
       const ctx = this.chartCanvas.nativeElement.getContext('2d');
       if (!ctx) return;
@@ -65,31 +64,25 @@ export class ProjectionChartComponent implements OnChanges, AfterViewInit, OnDes
         this.chartInstance.destroy();
       }
 
+      // Subtle gradient for wealth trajectory area
+      const gradient = ctx.createLinearGradient(0, 0, 0, 220);
+      gradient.addColorStop(0, 'rgba(99, 102, 241, 0.25)');
+      gradient.addColorStop(1, 'rgba(99, 102, 241, 0.0)');
+
       const datasets: any[] = [{
-        label: 'Projected Wealth ($)',
+        label: 'Projected Wealth',
         data: this.data,
         borderColor: '#6366f1',
-        backgroundColor: 'rgba(99, 102, 241, 0.12)',
-        borderWidth: 3,
+        backgroundColor: gradient,
+        borderWidth: 2.5,
         tension: 0.35,
         fill: true,
         pointBackgroundColor: '#10b981',
-        pointRadius: 4,
-        pointHoverRadius: 7
+        pointBorderColor: '#0b0c0e',
+        pointBorderWidth: 2,
+        pointRadius: 3.5,
+        pointHoverRadius: 6
       }];
-
-      if (this.fireTargetNumber && this.fireTargetNumber > 0) {
-        const fireLineData = new Array(this.labels.length).fill(this.fireTargetNumber);
-        datasets.push({
-          label: 'FIRE Target Threshold (4% Rule)',
-          data: fireLineData,
-          borderColor: '#f59e0b',
-          borderWidth: 2,
-          borderDash: [6, 6],
-          pointRadius: 0,
-          fill: false
-        });
-      }
 
       this.chartInstance = new Chart(ctx, {
         type: 'line',
@@ -102,29 +95,45 @@ export class ProjectionChartComponent implements OnChanges, AfterViewInit, OnDes
           maintainAspectRatio: false,
           plugins: {
             legend: {
-              labels: {
-                color: '#94a3b8',
-                font: { family: 'Inter', size: 12 }
-              }
+              display: false
             },
             tooltip: {
-              backgroundColor: 'rgba(15, 23, 42, 0.9)',
-              titleColor: '#f8fafc',
-              bodyColor: '#94a3b8',
-              borderColor: 'rgba(255, 255, 255, 0.1)',
+              backgroundColor: 'rgba(20, 22, 26, 0.95)',
+              titleColor: '#f3f4f6',
+              bodyColor: '#10b981',
+              borderColor: 'rgba(255, 255, 255, 0.12)',
               borderWidth: 1,
-              padding: 12,
-              displayColors: true
+              padding: 10,
+              boxPadding: 4,
+              usePointStyle: true,
+              callbacks: {
+                label: function(context) {
+                  const val = context.parsed.y ?? 0;
+                  return ' ' + (val >= 0 ? '$' : '-$') + Math.abs(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                }
+              }
             }
           },
           scales: {
             x: {
-              grid: { color: 'rgba(255, 255, 255, 0.05)' },
-              ticks: { color: '#94a3b8' }
+              grid: { color: 'rgba(255, 255, 255, 0.04)' },
+              ticks: { 
+                color: '#8b92a0',
+                font: { size: 11, family: 'Inter' }
+              }
             },
             y: {
-              grid: { color: 'rgba(255, 255, 255, 0.05)' },
-              ticks: { color: '#94a3b8' }
+              grid: { color: 'rgba(255, 255, 255, 0.04)' },
+              ticks: { 
+                color: '#8b92a0',
+                font: { size: 11, family: 'Inter' },
+                callback: function(value) {
+                  const num = Number(value);
+                  if (Math.abs(num) >= 1e6) return '$' + (num / 1e6).toFixed(1) + 'M';
+                  if (Math.abs(num) >= 1e3) return '$' + (num / 1e3).toFixed(0) + 'k';
+                  return '$' + num;
+                }
+              }
             }
           }
         }

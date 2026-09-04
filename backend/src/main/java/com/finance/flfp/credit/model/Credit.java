@@ -13,7 +13,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "credits")
+@Table(name = "credits", indexes = @Index(name = "idx_credit_account_id", columnList = "account_id"))
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -40,6 +40,9 @@ public class Credit {
 
     @Column(name = "start_date", nullable = false)
     private LocalDate startDate;
+
+    @Column(name = "growth_percentage", precision = 5, scale = 2)
+    private BigDecimal growthPercentage;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

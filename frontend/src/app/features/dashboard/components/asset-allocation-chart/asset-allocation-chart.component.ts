@@ -1,4 +1,4 @@
-import { Component, ElementRef, Input, OnChanges, SimpleChanges, ViewChild, OnDestroy, AfterViewInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, ElementRef, Input, OnChanges, SimpleChanges, ViewChild, OnDestroy, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Chart, registerables } from 'chart.js';
 
@@ -7,6 +7,7 @@ Chart.register(...registerables);
 @Component({
   selector: 'app-asset-allocation-chart',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule],
   template: `
     <div class="allocation-card">
@@ -23,18 +24,18 @@ Chart.register(...registerables);
     .allocation-card {
       background: var(--surface-color);
       border: 1px solid var(--border-color);
-      border-radius: var(--radius-xl);
-      padding: 20px;
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      box-shadow: var(--shadow-md);
+      gap: 8px;
+      box-shadow: var(--shadow-sm);
     }
-    .chart-header h4 { margin: 0; font-size: 1rem; color: var(--text-color); }
-    .sub-text { font-size: 0.75rem; color: var(--text-muted); }
+    .chart-header h4 { margin: 0; font-size: 0.95rem; color: var(--text-color); }
+    .sub-text { font-size: 0.72rem; color: var(--text-muted); }
     .chart-container {
       position: relative;
-      height: 220px;
+      height: 195px;
       width: 100%;
     }
     canvas {

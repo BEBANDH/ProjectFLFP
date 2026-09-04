@@ -47,9 +47,37 @@ public class ProjectionCalculationEngine {
                 if (credit.getAmount() == null || credit.getStartDate() == null || credit.getRecurrenceInterval() == null) {
                     continue;
                 }
-                LocalDate start = credit.getStartDate().isBefore(today) ? today.plusDays(1) : credit.getStartDate();
-                long occurrences = DateUtils.computeOccurrences(start, targetDate, credit.getRecurrenceInterval().name());
-                projectedBalance = projectedBalance.add(credit.getAmount().multiply(BigDecimal.valueOf(occurrences), MC));
+                LocalDate creditOrigin = credit.getStartDate();
+                LocalDate start = creditOrigin.isBefore(today) ? today.plusDays(1) : creditOrigin;
+                if (start.isAfter(targetDate)) {
+                    continue;
+                }
+
+                BigDecimal growthRate = credit.getGrowthPercentage();
+                boolean hasGrowth = growthRate != null && growthRate.compareTo(BigDecimal.ZERO) > 0;
+
+                if (!hasGrowth) {
+                    long occurrences = DateUtils.computeOccurrences(start, targetDate, credit.getRecurrenceInterval().name());
+                    projectedBalance = projectedBalance.add(credit.getAmount().multiply(BigDecimal.valueOf(occurrences), MC));
+                } else {
+                    BigDecimal totalInflow = BigDecimal.ZERO;
+                    double rate = growthRate.doubleValue() / 100.0;
+                    LocalDate current = start;
+
+                    while (!current.isAfter(targetDate)) {
+                        long completedYears = ChronoUnit.YEARS.between(creditOrigin, current);
+                        double factor = Math.pow(1.0 + rate, completedYears);
+                        BigDecimal adjustedAmount = credit.getAmount().multiply(BigDecimal.valueOf(factor), MC);
+                        totalInflow = totalInflow.add(adjustedAmount, MC);
+
+                        current = switch (credit.getRecurrenceInterval()) {
+                            case WEEKLY -> current.plusWeeks(1);
+                            case MONTHLY -> current.plusMonths(1);
+                            case ANNUAL -> current.plusYears(1);
+                        };
+                    }
+                    projectedBalance = projectedBalance.add(totalInflow, MC);
+                }
             }
         }
 
