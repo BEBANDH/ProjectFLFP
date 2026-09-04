@@ -546,6 +546,29 @@ import { ApiService } from '../../../core/services/api.service';
     <app-portfolio-wizard *ngIf="showWizard" (close)="showWizard = false"></app-portfolio-wizard>
   `,
   styles: [`
+    .print-only-report { display: none; }
+    
+    @media print {
+      .print-only-report {
+        display: block !important;
+        padding: 20px;
+        background: #ffffff !important;
+        color: #0f172a !important;
+      }
+      .print-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0284c7; padding-bottom: 16px; margin-bottom: 24px; }
+      .print-brand h2 { font-size: 1.6rem; color: #0284c7 !important; margin: 0 0 4px 0; }
+      .print-sub { font-size: 0.85rem; color: #64748b !important; margin: 0; }
+      .print-meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 6px; margin-bottom: 24px; }
+      .print-meta div { font-size: 0.75rem; color: #64748b !important; }
+      .print-meta div strong { display: block; font-weight: 600; margin-bottom: 4px; color: #0f172a !important; font-size: 0.95rem; }
+      .print-section { margin-bottom: 24px; break-inside: avoid; }
+      .print-section h3 { font-size: 1.1rem; color: #0f172a !important; border-bottom: 1px solid #cbd5e1; padding-bottom: 6px; margin-bottom: 12px; }
+      .print-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 0.85rem; }
+      .print-table th, .print-table td { padding: 8px 12px; border: 1px solid #e2e8f0; text-align: left; }
+      .print-table th { background-color: #f1f5f9 !important; font-weight: 700; color: #334155 !important; }
+      .print-footer { margin-top: 32px; text-align: center; font-size: 0.75rem; color: #94a3b8 !important; border-top: 1px solid #e2e8f0; padding-top: 16px; }
+    }
+
     .dashboard-container { display: flex; flex-direction: column; gap: 16px; }
     .dashboard-header { display: flex; justify-content: space-between; align-items: center; }
     .dashboard-header h1 { margin: 0; font-size: 1.5rem; color: var(--primary-color); }
