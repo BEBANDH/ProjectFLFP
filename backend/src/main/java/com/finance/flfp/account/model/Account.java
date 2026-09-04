@@ -36,6 +36,9 @@ public class Account {
     @Column(name = "current_balance", nullable = false, precision = 15, scale = 2)
     private BigDecimal currentBalance;
 
+    @Column(name = "fire_target_amount", precision = 15, scale = 2)
+    private BigDecimal fireTargetAmount;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

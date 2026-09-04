@@ -7,6 +7,7 @@ export interface Portfolio {
   accountName: string;
   bankName: string;
   currentBalance: number;
+  fireTargetAmount?: number;
 }
 
 @Injectable({

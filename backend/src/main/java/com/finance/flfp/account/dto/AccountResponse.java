@@ -14,5 +14,6 @@ public class AccountResponse {
     private String accountName;
     private String bankName;
     private BigDecimal currentBalance;
+    private BigDecimal fireTargetAmount;
     private LocalDateTime createdAt;
 }

@@ -34,6 +34,7 @@ public class AccountService {
                 .accountName(request.getAccountName())
                 .bankName(request.getBankName())
                 .currentBalance(request.getCurrentBalance())
+                .fireTargetAmount(request.getFireTargetAmount())
                 .build();
 
         Account savedAccount = accountRepository.save(account);
@@ -71,6 +72,7 @@ public class AccountService {
         account.setAccountName(request.getAccountName());
         account.setBankName(request.getBankName());
         account.setCurrentBalance(request.getCurrentBalance());
+        account.setFireTargetAmount(request.getFireTargetAmount());
 
         Account updatedAccount = accountRepository.save(account);
         return mapToResponse(updatedAccount);
@@ -88,6 +90,7 @@ public class AccountService {
                 .accountName(account.getAccountName())
                 .bankName(account.getBankName())
                 .currentBalance(account.getCurrentBalance())
+                .fireTargetAmount(account.getFireTargetAmount())
                 .createdAt(account.getCreatedAt())
                 .build();
     }

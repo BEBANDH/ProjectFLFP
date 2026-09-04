@@ -16,4 +16,6 @@ public class AccountUpdateRequest {
     
     @NotNull(message = "Current balance is mandatory")
     private BigDecimal currentBalance;
+
+    private BigDecimal fireTargetAmount;
 }

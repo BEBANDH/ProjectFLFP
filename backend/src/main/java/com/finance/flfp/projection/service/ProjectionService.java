@@ -120,7 +120,10 @@ public class ProjectionService {
         }
 
         BigDecimal annualExpenses = monthlyExpenses.multiply(BigDecimal.valueOf(12));
-        BigDecimal fireTargetNumber = annualExpenses.multiply(BigDecimal.valueOf(25)); // 4% Rule
+        BigDecimal fireTargetNumber = account.getFireTargetAmount();
+        if (fireTargetNumber == null || fireTargetNumber.compareTo(BigDecimal.ZERO) <= 0) {
+            fireTargetNumber = annualExpenses.multiply(BigDecimal.valueOf(25)); // 4% Rule fallback
+        }
 
         BigDecimal currentInvested = investments.stream()
                 .map(Investment::getInvestedAmount)

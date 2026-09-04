@@ -37,6 +37,15 @@ import { SettingsService } from '../../../core/services/settings.service';
               <input type="number" [(ngModel)]="formData.currentBalance" name="currentBalance" required step="0.01">
             </div>
           </div>
+
+          <div class="form-group">
+            <label>Custom FIRE Target Threshold Amount</label>
+            <div class="input-with-symbol">
+              <span class="currency-symbol">{{ 0 | currency:settings.currencyCode() | slice:0:1 }}</span>
+              <input type="number" [(ngModel)]="formData.fireTargetAmount" name="fireTargetAmount" placeholder="e.g. 5000000">
+            </div>
+            <span class="hint-text">Set your personalized Financial Independence milestone goal. If left blank or 0, it defaults to 25x annual recurring expenses (4% SWR).</span>
+          </div>
           
           <div class="form-actions">
             <button type="submit" class="btn-primary" [disabled]="!editForm.form.valid || isSaving">
@@ -68,6 +77,7 @@ import { SettingsService } from '../../../core/services/settings.service';
     
     .form-group { display: flex; flex-direction: column; margin-bottom: 20px; }
     .form-group label { margin-bottom: 8px; font-size: 0.95rem; font-weight: 500; }
+    .hint-text { font-size: 0.75rem; color: var(--text-muted); margin-top: 6px; }
     
     .input-with-symbol { display: flex; align-items: center; position: relative; }
     .currency-symbol { position: absolute; left: 12px; color: var(--text-muted); }
@@ -90,7 +100,7 @@ export class PortfolioDetailsPageComponent implements OnInit {
   settings = inject(SettingsService);
   
   activePortfolio: Portfolio | null = null;
-  formData = { accountName: '', bankName: '', currentBalance: 0 };
+  formData = { accountName: '', bankName: '', currentBalance: 0, fireTargetAmount: null as number | null };
   
   isSaving = false;
   showSuccess = false;
@@ -108,7 +118,8 @@ export class PortfolioDetailsPageComponent implements OnInit {
           this.formData = {
             accountName: found.accountName,
             bankName: found.bankName,
-            currentBalance: found.currentBalance
+            currentBalance: found.currentBalance,
+            fireTargetAmount: found.fireTargetAmount || null
           };
         }
       } else {
