@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SettingsService, Theme, Accent } from '../../../core/services/settings.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { KeyboardShortcutsService } from '../../../core/services/keyboard-shortcuts.service';
 
 @Component({
   selector: 'app-settings-page',
@@ -87,7 +88,52 @@ import { AuthService } from '../../../core/services/auth.service';
             </select>
           </div>
         </div>
+      </div>
 
+      <!-- Keyboard Shortcuts Cheat Sheet -->
+      <div class="card settings-card">
+        <h3>Keyboard Shortcuts Reference</h3>
+        <table class="shortcuts-table">
+          <thead>
+            <tr>
+              <th>Shortcut</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of shortcutsService.shortcutsList">
+              <td><kbd>{{ item.keyCombo }}</kbd></td>
+              <td>{{ item.description }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Release Notes & Changelog (v1.0) -->
+      <div class="card settings-card">
+        <div class="changelog-header-row">
+          <h3>Release Notes & Changelog</h3>
+          <span class="v1-badge">v1.0 Flagship Release</span>
+        </div>
+
+        <div class="changelog-body">
+          <div class="version-block">
+            <div class="version-title">
+              <span class="version-num">v1.0.0</span>
+              <span class="version-date">September 2026</span>
+            </div>
+            <ul class="version-features">
+              <li>🚀 <strong>FIRE & Freedom Engine</strong>: Calculates 4% SWR Target Nest Egg and predicts crossover date.</li>
+              <li>🍩 <strong>Asset Allocation Donut Chart</strong>: Grouping investments by SIP, Mutual Funds, Stocks, and Fixed Deposits.</li>
+              <li>🔍 <strong>Global Command Palette (Ctrl + K)</strong>: Instant keyboard-driven navigation search.</li>
+              <li>📊 <strong>Excel / CSV Exporter</strong>: 1-click financial data exports for offline auditing.</li>
+              <li>🚀 <strong>Guided Portfolio Wizard</strong>: 4-step interactive setup for new account baseline creation.</li>
+              <li>🖨️ <strong>Clean Printable Invoice & Statement Engine</strong>: Printable financial PDF reports omitting navigation UI.</li>
+              <li>🎯 <strong>Goal Planner & Time-To-Reach Metrics</strong>: Dynamic calculation of exact months needed to hit milestone targets.</li>
+              <li>⚡ <strong>Sidebar Collapse & Compact Mode</strong>: Icon-only sidebar view for maximum screen real estate.</li>
+            </ul>
+          </div>
+        </div>
       </div>
     </div>
   `,
@@ -96,14 +142,14 @@ import { AuthService } from '../../../core/services/auth.service';
     .page-header h1 { margin: 0; color: var(--primary-color); }
     .subtitle { color: var(--text-muted); margin-top: 5px; }
     
-    .settings-card h3 { margin-top: 0; margin-bottom: 25px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; color: var(--text-muted); text-transform: uppercase; font-size: 0.9rem; }
+    .settings-card h3 { margin-top: 0; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; color: var(--text-muted); text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.05em; }
     
-    .setting-row { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--border-color); }
+    .setting-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-color); }
     .setting-row:last-child { border-bottom: none; padding-bottom: 0; }
     
     .setting-info { display: flex; flex-direction: column; gap: 4px; }
-    .setting-info strong { font-size: 1.1rem; }
-    .setting-info span { color: var(--text-muted); font-size: 0.9rem; }
+    .setting-info strong { font-size: 1rem; }
+    .setting-info span { color: var(--text-muted); font-size: 0.85rem; }
     
     .setting-action select, .setting-action button.toggle-btn { min-width: 150px; }
     
@@ -114,14 +160,11 @@ import { AuthService } from '../../../core/services/auth.service';
       justify-content: center;
     }
 
-    .swatches-container {
-      display: flex;
-      gap: 12px;
-    }
+    .swatches-container { display: flex; gap: 10px; }
 
     .swatch {
-      width: 36px;
-      height: 36px;
+      width: 32px;
+      height: 32px;
       border-radius: 50%;
       border: 2px solid transparent;
       cursor: pointer;
@@ -134,21 +177,14 @@ import { AuthService } from '../../../core/services/auth.service';
       box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
 
-    .swatch:hover {
-      transform: scale(1.1);
-    }
-
+    .swatch:hover { transform: scale(1.1); }
     .swatch.active {
       transform: scale(1.15);
       border-color: var(--text-color);
       box-shadow: 0 0 0 2px var(--bg-color), 0 0 0 4px var(--text-color);
     }
 
-    .check-icon {
-      color: white;
-      font-weight: bold;
-      text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-    }
+    .check-icon { color: white; font-weight: bold; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
 
     .logout-btn {
       background-color: transparent !important;
@@ -161,11 +197,23 @@ import { AuthService } from '../../../core/services/auth.service';
       background-color: rgba(239, 68, 68, 0.1) !important;
       transform: none !important;
     }
+
+    .changelog-header-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 16px; }
+    .changelog-header-row h3 { margin: 0; border: none; padding: 0; }
+    .v1-badge { background: var(--primary-color); color: #fff; font-size: 0.72rem; font-weight: 700; padding: 3px 10px; border-radius: 12px; }
+
+    .version-title { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+    .version-num { font-size: 1.1rem; font-weight: 800; color: var(--primary-color); }
+    .version-date { font-size: 0.8rem; color: var(--text-muted); }
+    
+    .version-features { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; font-size: 0.88rem; }
+    .version-features li { line-height: 1.5; color: var(--text-color); }
   `]
 })
 export class SettingsPageComponent {
   settings = inject(SettingsService);
   authService = inject(AuthService);
+  shortcutsService = inject(KeyboardShortcutsService);
 
   accentOptions: { id: Accent, name: string, color: string }[] = [
     { id: 'indigo', name: 'Indigo', color: '#6366f1' },
@@ -175,3 +223,4 @@ export class SettingsPageComponent {
     { id: 'violet', name: 'Violet', color: '#8b5cf6' }
   ];
 }
+

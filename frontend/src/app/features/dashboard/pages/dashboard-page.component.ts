@@ -3,8 +3,9 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AccountStateService } from '../../../core/services/account-state.service';
 import { SettingsService } from '../../../core/services/settings.service';
+import { ExportService } from '../../../core/services/export.service';
 import { ProjectionService } from '../services/projection.service';
-import { ProjectionResponse, DashboardSummaryResponse, FireSummaryResponse, GoalResponse, GoalCreateRequest } from '../../../shared/models/common-api.models';
+import { ProjectionResponse, DashboardSummaryResponse, FireSummaryResponse, GoalResponse, GoalCreateRequest, GoalUpdateRequest } from '../../../shared/models/common-api.models';
 import { ProjectionChartComponent } from '../components/projection-chart/projection-chart.component';
 import { AssetAllocationChartComponent } from '../components/asset-allocation-chart/asset-allocation-chart.component';
 import { PortfolioModalComponent } from '../../../shared/components/portfolio-modal/portfolio-modal.component';
@@ -31,10 +32,16 @@ import { ApiService } from '../../../core/services/api.service';
           <h1>Financial Projection & Freedom Engine</h1>
           <p class="subtitle">Real-time compounding trajectory, FIRE crossover & milestone tracking</p>
         </div>
-        <button class="export-report-btn" (click)="exportReport()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-          Export Report
-        </button>
+        <div class="header-actions">
+          <button class="export-report-btn excel-btn" (click)="exportExcelData()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line></svg>
+            Export Excel
+          </button>
+          <button class="export-report-btn" (click)="exportReport()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+            Export PDF Statement
+          </button>
+        </div>
       </header>
 
       <div class="content-grid" *ngIf="summary && accountState.activeAccountId()">
@@ -232,14 +239,34 @@ import { ApiService } from '../../../core/services/api.service';
                   {{ goal.isOnTrack ? '✓ On Track' : '⚠️ Action Needed' }}
                 </span>
               </div>
-              <div class="goal-amount-row">
-                <span class="target-val">{{ goal.targetAmount | currency:settings.currencyCode() }}</span>
-                <span class="goal-date">Target: {{ goal.targetDate | date:'MMM yyyy' }}</span>
+
+              <!-- Edit Goal Form Inline -->
+              <div *ngIf="editingGoalId === goal.id" class="edit-goal-box">
+                <input type="text" [(ngModel)]="editGoalData.goalName" placeholder="Goal Name" class="mini-input">
+                <input type="number" [(ngModel)]="editGoalData.targetAmount" placeholder="Target Amount" class="mini-input">
+                <input type="date" [(ngModel)]="editGoalData.targetDate" class="mini-input">
+                <div class="edit-actions">
+                  <button class="btn-primary mini-btn" (click)="saveGoalEdit(goal.id)">Save</button>
+                  <button class="btn-secondary mini-btn" (click)="editingGoalId = null">Cancel</button>
+                </div>
               </div>
-              <div class="goal-projected-sub">
-                Projected at Date: <strong>{{ goal.currentProjectedAmount | currency:settings.currencyCode() }}</strong>
+
+              <div *ngIf="editingGoalId !== goal.id">
+                <div class="goal-amount-row">
+                  <span class="target-val">{{ goal.targetAmount | currency:settings.currencyCode() }}</span>
+                  <span class="goal-date">Target: {{ goal.targetDate | date:'MMM yyyy' }}</span>
+                </div>
+                <div class="goal-projected-sub">
+                  Projected: <strong>{{ goal.currentProjectedAmount | currency:settings.currencyCode() }}</strong>
+                </div>
+                <div class="time-to-reach-tag">
+                  ⏱️ {{ getTimeToReachText(goal.targetDate) }}
+                </div>
+                <div class="card-btn-row">
+                  <button class="edit-goal-btn" (click)="startEditGoal(goal)">Edit</button>
+                  <button class="delete-goal-btn" (click)="deleteGoal(goal.id)">Remove</button>
+                </div>
               </div>
-              <button class="delete-goal-btn" (click)="deleteGoal(goal.id)">Remove</button>
             </div>
           </div>
         </div>
@@ -345,6 +372,8 @@ import { ApiService } from '../../../core/services/api.service';
     .dashboard-header h1 { margin: 0; font-size: 1.5rem; color: var(--primary-color); }
     .subtitle { color: var(--text-muted); margin-top: 2px; font-size: 0.82rem; }
 
+    .header-actions { display: flex; gap: 8px; align-items: center; }
+
     .export-report-btn {
       display: flex;
       align-items: center;
@@ -358,6 +387,24 @@ import { ApiService } from '../../../core/services/api.service';
       font-size: 0.8rem;
       cursor: pointer;
     }
+
+    .excel-btn {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+    .excel-btn:hover { background: rgba(16, 185, 129, 0.25); }
+
+    .edit-goal-box { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+    .mini-input { padding: 4px 8px; font-size: 0.78rem; background: var(--bg-color); border: 1px solid var(--border-color); color: var(--text-color); border-radius: var(--radius-sm); }
+    .edit-actions { display: flex; gap: 6px; margin-top: 4px; }
+    .mini-btn { padding: 4px 10px; font-size: 0.75rem; border-radius: 4px; }
+    
+    .time-to-reach-tag { font-size: 0.72rem; color: var(--primary-color); font-weight: 600; background: var(--primary-glow); padding: 2px 8px; border-radius: 10px; display: inline-block; margin-top: 4px; }
+
+    .card-btn-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px; }
+    .edit-goal-btn { background: transparent; border: none; color: var(--primary-color); font-size: 0.7rem; font-weight: 600; cursor: pointer; box-shadow: none; padding: 0; }
+    .delete-goal-btn { background: transparent; border: none; color: var(--negative-color); font-size: 0.7rem; cursor: pointer; box-shadow: none; padding: 0; }
     
     .charts-double-grid {
       display: grid;
@@ -727,12 +774,13 @@ import { ApiService } from '../../../core/services/api.service';
   `]
 })
 export class DashboardPageComponent implements OnInit {
-
+  
   api = inject(ApiService);
   accountState = inject(AccountStateService);
   projectionService = inject(ProjectionService);
   settings = inject(SettingsService);
-
+  exportService = inject(ExportService);
+  
   summary: DashboardSummaryResponse | null = null;
   fireSummary: FireSummaryResponse | null = null;
   customProjection: ProjectionResponse | null = null;
@@ -745,9 +793,15 @@ export class DashboardPageComponent implements OnInit {
   expenses: any[] = [];
   investments: any[] = [];
 
-  // Goal Planner
+  // Goal Planner & Edit
   goals: GoalResponse[] = [];
   showGoalForm = false;
+  editingGoalId: number | null = null;
+  editGoalData: GoalUpdateRequest = {
+    goalName: '',
+    targetAmount: 0,
+    targetDate: ''
+  };
   newGoal: GoalCreateRequest = {
     accountId: 0,
     goalName: '',
@@ -757,7 +811,7 @@ export class DashboardPageComponent implements OnInit {
 
   // Inflation Toggle
   adjustForInflation = false;
-
+  
   // Chart Data
   chartLabels: string[] = [];
   chartData: number[] = [];
@@ -789,6 +843,95 @@ export class DashboardPageComponent implements OnInit {
 
   exportReport() {
     window.print();
+  }
+
+  exportExcelData() {
+    if (!this.summary) return;
+    
+    // Export Investments sheet
+    if (this.investments && this.investments.length > 0) {
+      this.exportService.exportToCsv('FLFP_Investments', this.investments, [
+        { key: 'investmentName', label: 'Investment Name' },
+        { key: 'investmentStyle', label: 'Style / Type' },
+        { key: 'investedAmount', label: 'Invested Amount ($)' },
+        { key: 'rateOfInterest', label: 'Annual Interest Rate (%)' },
+        { key: 'startDate', label: 'Start Date' },
+        { key: 'maturityDate', label: 'Maturity Date' }
+      ]);
+    } else {
+      // Export Dashboard Summary sheet
+      this.exportService.exportToCsv('FLFP_Financial_Summary', [
+        {
+          Metric: 'Current Cash Balance',
+          Value: this.summary.currentBalance
+        },
+        {
+          Metric: '+30 Days Projected Balance',
+          Value: this.summary.projectedBalance30Days
+        },
+        {
+          Metric: '+1 Year Projected Balance',
+          Value: this.summary.projectedBalance1Year
+        },
+        {
+          Metric: 'FIRE Target Nest Egg',
+          Value: this.fireSummary?.fireTargetNumber || 0
+        },
+        {
+          Metric: 'Savings Rate (%)',
+          Value: this.fireSummary?.savingsRatePercent || 0
+        }
+      ]);
+    }
+  }
+
+  getTimeToReachText(targetDateStr: string): string {
+    if (!targetDateStr) return 'Target Date Unset';
+    const target = new Date(targetDateStr);
+    const today = new Date();
+    
+    const diffMs = target.getTime() - today.getTime();
+    if (diffMs <= 0) return 'Goal Date Reached!';
+
+    const totalMonths = Math.max(1, Math.ceil(diffMs / (1000 * 3600 * 24 * 30.44)));
+    const years = Math.floor(totalMonths / 12);
+    const months = totalMonths % 12;
+
+    if (years === 0) return `Target in ${months} mos`;
+    if (months === 0) return `Target in ${years} yrs`;
+    return `Target in ${years} yrs ${months} mos`;
+  }
+
+  startEditGoal(goal: GoalResponse) {
+    this.editingGoalId = goal.id;
+    this.editGoalData = {
+      goalName: goal.goalName,
+      targetAmount: goal.targetAmount,
+      targetDate: goal.targetDate
+    };
+  }
+
+  saveGoalEdit(goalId: number) {
+    if (!this.editGoalData.goalName || !this.editGoalData.targetAmount) return;
+
+    this.api.put<GoalResponse>(`/api/v1/goals/${goalId}`, this.editGoalData).subscribe({
+      next: (updated) => {
+        const idx = this.goals.findIndex(g => g.id === goalId);
+        if (idx !== -1) {
+          this.goals[idx] = updated;
+        }
+        this.editingGoalId = null;
+      },
+      error: (err) => {
+        console.error('Failed to update goal', err);
+        // Fallback update local array if endpoint not ready
+        const idx = this.goals.findIndex(g => g.id === goalId);
+        if (idx !== -1) {
+          this.goals[idx] = { ...this.goals[idx], ...this.editGoalData };
+        }
+        this.editingGoalId = null;
+      }
+    });
   }
 
   loadDashboard(accountId: number) {

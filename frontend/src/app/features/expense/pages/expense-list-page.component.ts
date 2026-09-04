@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../../core/services/api.service';
 import { AccountStateService } from '../../../core/services/account-state.service';
 import { SettingsService } from '../../../core/services/settings.service';
+import { ExportService } from '../../../core/services/export.service';
 
 @Component({
   selector: 'app-expense-list-page',
@@ -12,8 +13,14 @@ import { SettingsService } from '../../../core/services/settings.service';
   template: `
     <div class="expense-container">
       <header class="page-header">
-        <h1>Expenses Management</h1>
-        <p class="subtitle">Track your instant deductions and recurring obligations.</p>
+        <div>
+          <h1>Expenses Management</h1>
+          <p class="subtitle">Track your instant deductions and recurring obligations.</p>
+        </div>
+        <button class="export-excel-btn" (click)="exportExcel()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line></svg>
+          Export Excel
+        </button>
       </header>
 
       <div class="split-view">
@@ -98,9 +105,25 @@ import { SettingsService } from '../../../core/services/settings.service';
   `,
   styles: [`
     .expense-container { display: flex; flex-direction: column; gap: 20px; }
+    .page-header { display: flex; justify-content: space-between; align-items: center; }
     .page-header h1 { margin: 0; color: var(--primary-color); }
     .subtitle { color: var(--text-muted); margin-top: 5px; }
     
+    .export-excel-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    .export-excel-btn:hover { background: rgba(16, 185, 129, 0.25); }
+
     .split-view { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     
     .card {
@@ -170,6 +193,7 @@ export class ExpenseListPageComponent implements OnInit {
   api = inject(ApiService);
   accountState = inject(AccountStateService);
   settings = inject(SettingsService);
+  exportService = inject(ExportService);
   
   expenses: any[] = [];
   editingId: number | null = null;
@@ -197,6 +221,10 @@ export class ExpenseListPageComponent implements OnInit {
   }
 
   ngOnInit() {}
+
+  exportExcel() {
+    this.exportService.exportToCsv('expenses_report.csv', this.expenses);
+  }
 
   loadExpenses(accountId: number) {
     this.api.get<any[]>(`/api/v1/expenses/account/${accountId}`).subscribe({

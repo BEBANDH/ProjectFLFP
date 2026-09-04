@@ -55,3 +55,11 @@ export interface GoalCreateRequest {
   targetDate: string;
   notes?: string;
 }
+
+export interface GoalUpdateRequest {
+  goalName: string;
+  targetAmount: number;
+  targetDate: string;
+  notes?: string;
+}
+
