@@ -523,7 +523,7 @@ button:disabled {
     font-family: Inter, system-ui, -apple-system, sans-serif !important;
   }
 
-  .sidebar, .navbar, .cmd-k-trigger, .portfolio-controls, .export-report-btn, button, .collapse-toggle-btn, .shortcuts-modal-backdrop, .content-grid {
+  .sidebar, .navbar, .cmd-k-trigger, .portfolio-controls, .export-report-btn, button, .collapse-toggle-btn, .shortcuts-modal-backdrop, .content-grid, .dashboard-header {
     display: none !important;
   }
 
@@ -551,19 +551,19 @@ button:disabled {
     margin-bottom: 24px;
   }
 
-  .print-header h1 {
+  .print-brand h2 {
     font-size: 1.6rem;
     color: #0284c7 !important;
     margin: 0 0 4px 0;
   }
 
-  .print-subtitle {
+  .print-sub {
     font-size: 0.85rem;
     color: #64748b !important;
     margin: 0;
   }
 
-  .print-meta-grid {
+  .print-meta {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 12px;
@@ -574,17 +574,17 @@ button:disabled {
     margin-bottom: 24px;
   }
 
-  .print-meta-item .meta-label {
+  .print-meta div {
     font-size: 0.75rem;
     color: #64748b !important;
-    text-transform: uppercase;
-    font-weight: 700;
   }
-
-  .print-meta-item .meta-val {
-    font-size: 0.9rem;
-    font-weight: 700;
+  
+  .print-meta div strong {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 4px;
     color: #0f172a !important;
+    font-size: 0.95rem;
   }
 
   .print-section {
