@@ -344,6 +344,185 @@ import { ApiService } from '../../../core/services/api.service';
                 </li>
               </ul>
             </div>
+        </div>
+
+        <!-- Print-Only Executive Financial Statement & Report -->
+        <div class="print-only-report">
+          <div class="print-header">
+            <div class="print-brand">
+              <h2>FINANCIAL LIFE PLANNING & PROJECTION STATEMENT</h2>
+              <p class="print-sub">Comprehensive Portfolio Analysis & Cashflow Audit</p>
+            </div>
+            <div class="print-meta">
+              <div><strong>Portfolio:</strong> {{ activePortfolioName }}</div>
+              <div><strong>Institution:</strong> {{ activePortfolioBank }}</div>
+              <div><strong>Statement Date:</strong> {{ todayDate | date:'fullDate' }}</div>
+              <div><strong>Base Currency:</strong> {{ settings.currencyCode() }}</div>
+            </div>
+          </div>
+
+          <!-- Executive Financial Summary Table -->
+          <div class="print-section">
+            <h3>1. Executive Summary & FIRE Intelligence</h3>
+            <table class="print-table">
+              <thead>
+                <tr>
+                  <th>Metric</th>
+                  <th>Current Value</th>
+                  <th>Key Insight / Projection</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Liquid Baseline Balance</td>
+                  <td>{{ summary?.currentBalance | currency:settings.currencyCode() }}</td>
+                  <td>Current cash/bank balance</td>
+                </tr>
+                <tr>
+                  <td>Total Invested Assets</td>
+                  <td>{{ (fireSummary?.currentPortfolioNestEgg || 0) - (summary?.currentBalance || 0) | currency:settings.currencyCode() }}</td>
+                  <td>Compounding investment capital</td>
+                </tr>
+                <tr>
+                  <td>Net Portfolio Nest Egg</td>
+                  <td>{{ fireSummary?.currentPortfolioNestEgg | currency:settings.currencyCode() }}</td>
+                  <td>Liquid Balance + Investments</td>
+                </tr>
+                <tr>
+                  <td>Monthly Recurring Income</td>
+                  <td>{{ fireSummary?.monthlyIncome | currency:settings.currencyCode() }}</td>
+                  <td>Aggregated active/passive inflows</td>
+                </tr>
+                <tr>
+                  <td>Monthly Recurring Expenses</td>
+                  <td>{{ fireSummary?.monthlyExpenses | currency:settings.currencyCode() }}</td>
+                  <td>Aggregated obligations</td>
+                </tr>
+                <tr>
+                  <td>Monthly Savings Rate</td>
+                  <td>{{ fireSummary?.savingsRatePercent | number:'1.0-1' }}%</td>
+                  <td>Surplus ratio reinvested</td>
+                </tr>
+                <tr>
+                  <td>FIRE Target Nest Egg</td>
+                  <td>{{ fireSummary?.fireTargetNumber | currency:settings.currencyCode() }}</td>
+                  <td>Target threshold</td>
+                </tr>
+                <tr>
+                  <td>FIRE Freedom Date</td>
+                  <td>{{ fireSummary?.fireCrossoverDate ? (fireSummary?.fireCrossoverDate | date:'MMM yyyy') : 'Pending Growth' }}</td>
+                  <td>{{ fireSummary?.isFireAchieved ? '🎉 Freedom Achieved' : 'Crossover point prediction' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Active Investments Table -->
+          <div class="print-section">
+            <h3>2. Active Investments Breakdown</h3>
+            <table class="print-table" *ngIf="investments.length > 0">
+              <thead>
+                <tr>
+                  <th>Asset Name</th>
+                  <th>Type / Style</th>
+                  <th>Invested Amount</th>
+                  <th>Interest Rate</th>
+                  <th>Start Date</th>
+                  <th>Principal Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let inv of investments">
+                  <td><strong>{{ inv.investmentName }}</strong></td>
+                  <td>{{ inv.investmentStyle }} ({{ inv.investmentType }})</td>
+                  <td>{{ inv.investedAmount | currency:settings.currencyCode() }}</td>
+                  <td>{{ inv.rateOfInterest }}% p.a.</td>
+                  <td>{{ inv.startDate | date:'mediumDate' }}</td>
+                  <td>{{ inv.isExcludedFromPrincipal ? 'Excluded from Base' : 'Included' }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="print-empty" *ngIf="investments.length === 0">No active investments recorded.</div>
+          </div>
+
+          <!-- Recurring Expenses Table -->
+          <div class="print-section">
+            <h3>3. Expense & Outflow Schedule</h3>
+            <table class="print-table" *ngIf="expenses.length > 0">
+              <thead>
+                <tr>
+                  <th>Expense Item</th>
+                  <th>Type</th>
+                  <th>Interval</th>
+                  <th>Amount</th>
+                  <th>Start Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let exp of expenses">
+                  <td><strong>{{ exp.name }}</strong></td>
+                  <td>{{ exp.expenseType }}</td>
+                  <td>{{ exp.recurrenceInterval || 'N/A' }}</td>
+                  <td>{{ exp.amount | currency:settings.currencyCode() }}</td>
+                  <td>{{ exp.startDate | date:'mediumDate' }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="print-empty" *ngIf="expenses.length === 0">No logged expenses recorded.</div>
+          </div>
+
+          <!-- Income & Credits Table -->
+          <div class="print-section">
+            <h3>4. Income & Credit Inflows</h3>
+            <table class="print-table" *ngIf="credits.length > 0">
+              <thead>
+                <tr>
+                  <th>Income Source</th>
+                  <th>Interval</th>
+                  <th>Amount</th>
+                  <th>Start Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let c of credits">
+                  <td><strong>{{ c.sourceName }}</strong></td>
+                  <td>{{ c.recurrenceInterval }}</td>
+                  <td>+{{ c.amount | currency:settings.currencyCode() }}</td>
+                  <td>{{ c.startDate | date:'mediumDate' }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="print-empty" *ngIf="credits.length === 0">No active credits recorded.</div>
+          </div>
+
+          <!-- Financial Goals Table -->
+          <div class="print-section">
+            <h3>5. Financial Milestone Goals</h3>
+            <table class="print-table" *ngIf="goals.length > 0">
+              <thead>
+                <tr>
+                  <th>Goal Name</th>
+                  <th>Target Amount</th>
+                  <th>Target Date</th>
+                  <th>Projected Amount</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let g of goals">
+                  <td><strong>{{ g.goalName }}</strong></td>
+                  <td>{{ g.targetAmount | currency:settings.currencyCode() }}</td>
+                  <td>{{ g.targetDate | date:'MMM yyyy' }}</td>
+                  <td>{{ g.currentProjectedAmount | currency:settings.currencyCode() }}</td>
+                  <td>{{ g.isOnTrack ? '✓ On Track' : '⚠️ Action Needed' }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="print-empty" *ngIf="goals.length === 0">No milestone goals set.</div>
+          </div>
+
+          <div class="print-footer">
+            <p>Report generated automatically by FLFP Engine • Confidential Financial Statement</p>
           </div>
         </div>
       </div>
@@ -1057,5 +1236,21 @@ export class DashboardPageComponent implements OnInit {
       next: () => this.goals = this.goals.filter(g => g.id !== id),
       error: (err) => console.error('Failed to delete goal', err)
     });
+  }
+
+  get activePortfolioName(): string {
+    const activeId = this.accountState.activeAccountId();
+    const portfolio = this.accountState.portfolios().find(p => p.id === activeId);
+    return portfolio ? portfolio.accountName : 'Primary Portfolio';
+  }
+
+  get activePortfolioBank(): string {
+    const activeId = this.accountState.activeAccountId();
+    const portfolio = this.accountState.portfolios().find(p => p.id === activeId);
+    return portfolio ? portfolio.bankName : 'N/A';
+  }
+
+  get todayDate(): string {
+    return new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   }
 }
